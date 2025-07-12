@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+.App {
+  height: 100vh;
+  overflow: hidden;
+}
