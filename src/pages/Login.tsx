@@ -1,27 +1,40 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useUserContext } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
-import { useSocket } from "../hooks/useSocket";
+// import { useSocket } from "../hooks/useSocket";
+import userServices from "../services/userServices";
 
-// interface userDataType {
-//   id: string;
-//   username: string;
-//   password?: string;
-//   isOnline: boolean;
-//   avatar?: string;
-// }
+interface userDataType {
+  email: string;
+  name: string;
+  createdAt?: Date;
+  avatar?: string;
+}
+
+interface loginResponseType {
+  success: boolean;
+  message?: string;
+  user?: userDataType;
+}
 
 const Login: React.FC = () => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
   const navigate = useNavigate();
+  const { isLoggedIn, userdata, setIsLoggedIn, handleUpdateUser } =
+    useUserContext();
 
-  const { findUser } = useUserContext();
-  const { socket } = useSocket();
+  // const { socket } = useSocket();
+
+  useEffect(() => {
+    if (isLoggedIn && userdata && userdata.id) {
+      navigate("/home");
+    }
+  }, [isLoggedIn, navigate]);
 
   const showToastMessage = (message: string, type: "success" | "error") => {
     setToastMessage(message);
@@ -32,21 +45,25 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    console.log(username, password);
 
-    const user = findUser(username, password, socket?.id);
+    const response: loginResponseType = await userServices.loginUser(
+      "a@gmail.com",
+      "Test@123"
+    );
+
+    const user = response?.user;
 
     if (user) {
       // Login successful
       console.log("Login successful:", user);
-      showToastMessage(`Welcome back, ${user.displayName}! 🎉`, "success");
+      showToastMessage(`Welcome back, ${user?.name}! 🎉`, "success");
+      setIsLoggedIn(true);
+      // Update user context
+      handleUpdateUser(user);
       navigate("/home");
     } else {
       // Login failed
-      showToastMessage(
-        "Invalid username or password. Please try again.",
-        "error"
-      );
+      showToastMessage("Invalid email or password. Please try again.", "error");
     }
     setIsLoading(false);
   };
@@ -88,19 +105,20 @@ const Login: React.FC = () => {
             {/* Username Field */}
             <div>
               <label
-                htmlFor="username"
+                htmlFor="email"
                 className="block text-sm font-semibold text-gray-700 mb-2"
               >
-                Username
+                Email
               </label>
               <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="email"
+                type="email"
+                // value={email}
+                value="a@gmail.com"
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
-                placeholder="Enter your username"
+                placeholder="Enter your email"
               />
             </div>
 
@@ -115,7 +133,8 @@ const Login: React.FC = () => {
               <input
                 id="password"
                 type="password"
-                value={password}
+                // value={password}
+                value="Test@123"
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
@@ -143,7 +162,7 @@ const Login: React.FC = () => {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading || !username.trim() || !password.trim()}
+              // disabled={isLoading || !email.trim() || !password.trim()}
               className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 active:scale-95"
             >
               {isLoading ? (

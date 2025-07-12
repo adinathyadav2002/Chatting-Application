@@ -14,6 +14,8 @@
   "dependencies": {
     "@prisma/client": "^6.11.1",
     "@tailwindcss/vite": "^4.1.11",
+    "axios": "^1.10.0",
+    "bcryptjs": "^3.0.2",
     "dotenv": "^17.1.0",
     "express": "^5.1.0",
     "mysql2": "^3.14.2",

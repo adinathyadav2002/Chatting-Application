@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -24,4 +23,5 @@ model User {
   isVerified Boolean @default(false)
   isOnline   Boolean @default(false)
   avatar String?
+  createdAt DateTime @default(now())
 }

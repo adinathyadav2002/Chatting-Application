@@ -9,8 +9,7 @@ import { useNavigate } from "react-router-dom";
 
 const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const { userdata, dummyUsers, isLoggedIn } = useUserContext();
-  const [users] = useState(dummyUsers);
+  const { userdata, isLoggedIn } = useUserContext();
   const { socket, isConnected } = useSocket();
   const navigate = useNavigate();
 
@@ -33,8 +32,6 @@ const ChatRoom: React.FC = () => {
         timestamp: new Date(messageData.timestamp),
         type: "text",
       };
-
-      console.log(newMessage);
 
       setMessages((prev) => [...prev, newMessage]);
     });
@@ -84,7 +81,7 @@ const ChatRoom: React.FC = () => {
           </div>
         </div>
         <div className="p-4 h-full">
-          <UserList users={[...users]} userdataId={userdata.id} />
+          <UserList userdataId={userdata.id} />
         </div>
       </div>
 
@@ -95,7 +92,7 @@ const ChatRoom: React.FC = () => {
           <h3 className="text-xl font-bold text-gray-800">General Chat</h3>
           <p className="text-sm text-gray-600 flex items-center gap-2">
             <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-            {users.filter((u) => u.isOnline).length + 1} users online
+            {/* {users.filter((u) => u.isOnline).length + 1} users online */}
           </p>
         </div>
         {/* Messages */}
