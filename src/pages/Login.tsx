@@ -167,7 +167,7 @@ const Login: React.FC = () => {
             </div>
 
             {/* Remember Me */}
-            <div className="flex items-center justify-between">
+            {/* <div className="flex items-center justify-between">
               <label className="flex items-center">
                 <input
                   type="checkbox"
@@ -181,7 +181,7 @@ const Login: React.FC = () => {
               >
                 Forgot password?
               </a>
-            </div>
+            </div> */}
 
             {/* Submit Button */}
             <button

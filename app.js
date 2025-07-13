@@ -22,7 +22,11 @@ app.use(express.json());
 
 const io = new SocketIOServer(server, {
   cors: {
-    origin: "http://localhost:5173", // Vite default
+    // set two origins for CORS
+    origin: [
+      "http://localhost:5173", // Vite default
+      "http://192.168.1.9:5173", // Network IP (removed trailing slash)
+    ],
     methods: ["GET", "POST"],
   },
 });
@@ -94,22 +98,48 @@ io.on("connection", (socket) => {
   });
 
   socket.on("Private message", async (msg) => {
+    console.log("Received private message:", msg);
     if (!msg || !msg.content || !msg.senderId || !msg.receiverId) {
       console.error("Invalid private message data:", msg);
       return;
     }
 
     try {
-      const message = await prisma.Messages.create({
+      const message = await prisma.messages.create({
         data: {
           content: msg.content,
-          senderId: msg.senderId,
-          receiverId: msg.receiverId,
+          senderId: parseInt(msg.senderId),
+          receiverId: parseInt(msg.receiverId),
+          isGlobal: false,
+        },
+        include: {
+          sender: true,
+          receiver: true,
         },
       });
 
-      // Emit the private message to the intended recipient
-      socket.to(msg.receiverId).emit("Private message", message);
+      // Get both sender and receiver socket info
+      const [sender, receiver] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: parseInt(msg.senderId) },
+        }),
+        prisma.user.findUnique({
+          where: { id: parseInt(msg.receiverId) },
+        }),
+      ]);
+
+      console.log("Sender socket:", sender?.socketId);
+      console.log("Receiver socket:", receiver?.socketId);
+
+      // Emit to receiver if they're online
+      if (receiver?.socketId) {
+        io.to(receiver.socketId).emit("Private message", message);
+      }
+
+      // Emit to sender as well (confirmation that message was sent)
+      if (sender?.socketId) {
+        io.to(sender.socketId).emit("Private message", message);
+      }
     } catch (err) {
       console.error("Error sending private message:", err);
     }
@@ -145,7 +175,7 @@ io.on("connection", (socket) => {
 
 // set origin for CORS
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "http://localhost:5173");
+  res.header("Access-Control-Allow-Origin", "*"); // Allow all origins, or specify both localhost and network IP
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
   res.header("Access-Control-Allow-Headers", "Content-Type");
   next();

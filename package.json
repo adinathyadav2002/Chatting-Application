@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "server": "node app.js",
     "dev:server": "nodemon app.js",
     "build": "tsc -b && vite build",

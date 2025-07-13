@@ -23,7 +23,7 @@ export interface Room {
 }
 
 export interface SocketMessage {
-  userId: string;
+  senderId: string;
   name: string;
   content: string;
   timestamp: string;

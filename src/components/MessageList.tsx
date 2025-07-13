@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import type { Message } from "../types";
 
 interface MessageListProps {
@@ -10,17 +10,35 @@ const MessageList: React.FC<MessageListProps> = ({
   messages,
   currentUserId,
 }) => {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const formatTime = (timestamp: Date) => {
     return timestamp.toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
   };
-
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-gray-50 to-white">
+    <div
+      ref={messagesContainerRef}
+      className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-gray-50 to-white"
+    >
+      {" "}
       {messages.map((message) => {
-        const isOwnMessage = message?.userId === currentUserId;
+        const isOwnMessage =
+          message?.userId.toString() === currentUserId.toString();
         return (
           <div
             key={message?.id}
@@ -48,10 +66,11 @@ const MessageList: React.FC<MessageListProps> = ({
               >
                 {formatTime(message?.timestamp)}
               </div>
-            </div>
+            </div>{" "}
           </div>
         );
       })}
+      <div ref={messagesEndRef} />
     </div>
   );
 };

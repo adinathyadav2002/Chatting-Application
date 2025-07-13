@@ -13,9 +13,7 @@ import { messageServices } from "../services/messageServices";
 
 const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [privateMessages, setPrivateMessages] = useState<
-    Record<string, Message[]>
-  >({});
+  const [privateMessages, setPrivateMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<
     Array<{
       user: User;
@@ -98,6 +96,8 @@ const ChatRoom: React.FC = () => {
       return;
     }
 
+    console.log("called ");
+
     // Listen for incoming global messages
     socket.on("Global message", (messageData: SocketMessage) => {
       const newMessage: Message = {
@@ -113,74 +113,71 @@ const ChatRoom: React.FC = () => {
     });
 
     // Listen for private messages
-    socket.on(
-      "private message",
-      (messageData: SocketMessage & { targetUserId: string | number }) => {
-        const newMessage: Message = {
-          id: Date.now().toString(),
-          userId: messageData.userId || "unknown",
-          username: messageData.name || "Anonymous",
-          content: messageData.content,
-          timestamp: new Date(messageData.timestamp),
-          type: "private",
-        };
+    // socket.to(msg.receiverId).emit("Private message", message);
+    socket.on("Private message", (messageData) => {
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        userId: messageData.senderId || "unknown",
+        username: messageData.name || "Anonymous",
+        content: messageData.content,
+        timestamp: new Date(messageData.timestamp),
+        type: "private",
+      };
 
-        const otherUserId =
-          messageData.userId.toString() === userdata.id?.toString()
-            ? messageData.targetUserId.toString()
-            : messageData.userId.toString();
+      const otherUserId =
+        messageData.senderId.toString() === userdata.id?.toString()
+          ? messageData.receiverId.toString()
+          : messageData.senderId.toString();
 
-        // Add to private messages
-        setPrivateMessages((prev) => ({
-          ...prev,
-          [otherUserId]: [...(prev[otherUserId] || []), newMessage],
-        }));
+      setPrivateMessages((prev) => ({
+        ...prev,
+        [otherUserId]: [...(prev[otherUserId] || []), newMessage],
+      }));
 
-        // Update conversations
-        const user = users.find((u) => u.id.toString() === otherUserId);
-        if (user) {
-          setConversations((prev) => {
-            const existing = prev.find(
-              (c) => c.user.id.toString() === otherUserId
+      // Update or create conversation preview
+      const user = users.find((u) => u.id.toString() === otherUserId);
+      if (user) {
+        setConversations((prev) => {
+          const existing = prev.find(
+            (c) => c.user.id.toString() === otherUserId
+          );
+          if (existing) {
+            return prev.map((c) =>
+              c.user.id.toString() === otherUserId
+                ? {
+                    ...c,
+                    lastMessage: newMessage.content,
+                    lastMessageTime: newMessage.timestamp,
+                    unreadCount:
+                      messageData.senderId.toString() !==
+                      userdata.id?.toString()
+                        ? c.unreadCount + 1
+                        : c.unreadCount,
+                  }
+                : c
             );
-            if (existing) {
-              return prev.map((c) =>
-                c.user.id.toString() === otherUserId
-                  ? {
-                      ...c,
-                      lastMessage: newMessage.content,
-                      lastMessageTime: newMessage.timestamp,
-                      unreadCount:
-                        messageData.userId.toString() !==
-                        userdata.id?.toString()
-                          ? c.unreadCount + 1
-                          : c.unreadCount,
-                    }
-                  : c
-              );
-            } else {
-              return [
-                ...prev,
-                {
-                  user,
-                  lastMessage: newMessage.content,
-                  lastMessageTime: newMessage.timestamp,
-                  unreadCount:
-                    messageData.userId.toString() !== userdata.id?.toString()
-                      ? 1
-                      : 0,
-                },
-              ];
-            }
-          });
-        }
+          } else {
+            return [
+              ...prev,
+              {
+                user,
+                lastMessage: newMessage.content,
+                lastMessageTime: newMessage.timestamp,
+                unreadCount:
+                  messageData.senderId.toString() !== userdata.id?.toString()
+                    ? 1
+                    : 0,
+              },
+            ];
+          }
+        });
       }
-    );
+    });
 
     // Cleanup listeners on unmount
     return () => {
       socket.off("Global message");
-      socket.off("private message");
+      socket.off("Private message");
     };
   }, [socket, isLoggedIn, navigate, userdata.id, users]);
 
@@ -209,15 +206,17 @@ const ChatRoom: React.FC = () => {
     }
 
     const messageData = {
-      userId: userdata.id.toString(),
+      senderId: userdata.id.toString(),
       name: userdata.name || userdata.username || "Anonymous",
       content,
       timestamp: new Date().toISOString(),
-      targetUserId: targetUserId.toString(),
+      receiverId: targetUserId.toString(),
     };
 
+    console.log("Sending private message:", messageData);
+
     // Emit private message to server
-    socket.emit("private message", messageData);
+    socket.emit("Private message", messageData);
   };
 
   const handleUserClick = (user: User) => {
