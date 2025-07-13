@@ -46,7 +46,9 @@ class UserServices {
 
   async getAllUsers() {
     // call axios get request to fetch all users
-    const response = await axios.get(`${import.meta.env.VITE_API_URL}/users`);
+    const response = await axios.get(
+      `${import.meta.env.VITE_API_URL}/user/all`
+    );
 
     if (response.status === 200) {
       return { success: true, users: response.data.users };

@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import type { Message, SocketMessage, User } from "../types";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
-import UserList from "./UserList";
+import UserListItem from "./UserListItem";
+import PrivateMessageModal from "./PrivateMessageModal";
+import PrivateMessagesList from "./PrivateMessagesList";
 import { useSocket } from "../hooks/useSocket";
 import { useUserContext } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +12,21 @@ import userServices from "../services/userServices";
 
 const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [privateMessages, setPrivateMessages] = useState<
+    Record<string, Message[]>
+  >({});
+  const [conversations, setConversations] = useState<
+    Array<{
+      user: User;
+      lastMessage?: string;
+      lastMessageTime?: Date;
+      unreadCount: number;
+    }>
+  >([]);
+  const [isPrivateModalOpen, setIsPrivateModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isConversationsVisible, setIsConversationsVisible] = useState(false);
+
   const { userdata, isLoggedIn } = useUserContext();
   const { socket, isConnected } = useSocket();
   const navigate = useNavigate();
@@ -54,43 +71,158 @@ const ChatRoom: React.FC = () => {
       return;
     }
 
-    // Listen for incoming messages
-    socket.on("chat message", (messageData: SocketMessage) => {
-      console.log(messageData);
+    // Listen for incoming global messages
+    socket.on("Global message", (messageData: SocketMessage) => {
+      console.log("Received global message:", messageData);
       const newMessage: Message = {
         id: Date.now().toString(),
-        userId: messageData.userId || "unknown",
-        username: messageData.name || "Anonymous",
+        userId: messageData.sender.id || "unknown",
+        username: messageData.sender.name || "Anonymous",
         content: messageData.content,
-        timestamp: new Date(messageData.timestamp),
+        timestamp: new Date(messageData.sender.createdAt),
         type: "text",
       };
+
+      console.log("Received global message:", newMessage);
 
       setMessages((prev) => [...prev, newMessage]);
     });
 
-    // Cleanup listener on unmount
+    // Listen for private messages
+    socket.on(
+      "private message",
+      (messageData: SocketMessage & { targetUserId: string | number }) => {
+        const newMessage: Message = {
+          id: Date.now().toString(),
+          userId: messageData.userId || "unknown",
+          username: messageData.name || "Anonymous",
+          content: messageData.content,
+          timestamp: new Date(messageData.timestamp),
+          type: "private",
+        };
+
+        const otherUserId =
+          messageData.userId.toString() === userdata.id?.toString()
+            ? messageData.targetUserId.toString()
+            : messageData.userId.toString();
+
+        // Add to private messages
+        setPrivateMessages((prev) => ({
+          ...prev,
+          [otherUserId]: [...(prev[otherUserId] || []), newMessage],
+        }));
+
+        // Update conversations
+        const user = users.find((u) => u.id.toString() === otherUserId);
+        if (user) {
+          setConversations((prev) => {
+            const existing = prev.find(
+              (c) => c.user.id.toString() === otherUserId
+            );
+            if (existing) {
+              return prev.map((c) =>
+                c.user.id.toString() === otherUserId
+                  ? {
+                      ...c,
+                      lastMessage: newMessage.content,
+                      lastMessageTime: newMessage.timestamp,
+                      unreadCount:
+                        messageData.userId.toString() !==
+                        userdata.id?.toString()
+                          ? c.unreadCount + 1
+                          : c.unreadCount,
+                    }
+                  : c
+              );
+            } else {
+              return [
+                ...prev,
+                {
+                  user,
+                  lastMessage: newMessage.content,
+                  lastMessageTime: newMessage.timestamp,
+                  unreadCount:
+                    messageData.userId.toString() !== userdata.id?.toString()
+                      ? 1
+                      : 0,
+                },
+              ];
+            }
+          });
+        }
+      }
+    );
+
+    // Cleanup listeners on unmount
     return () => {
-      socket.off("chat message");
+      socket.off("Global message");
+      socket.off("private message");
     };
-  }, [socket]);
+  }, [socket, isLoggedIn, navigate, userdata.id, users]);
 
   const handleSendMessage = (content: string) => {
-    if (!socket || !isConnected) {
-      console.log("Socket not connected");
+    if (!socket || !isConnected || !userdata.id) {
       return;
     }
 
+    console.log(userdata);
+
     const messageData: SocketMessage = {
-      userId: userdata.id,
-      name: userdata.name,
+      userId: userdata.id.toString(),
+      name: userdata.name || "Anonymous",
       content,
       timestamp: new Date().toISOString(),
     };
 
+    console.log(messageData);
+
     // Emit message to server
-    socket.emit("chat message", messageData);
+    socket.emit("Global message", messageData);
   };
+
+  const handleSendPrivateMessage = (
+    content: string,
+    targetUserId: string | number
+  ) => {
+    if (!socket || !isConnected || !userdata.id) {
+      return;
+    }
+
+    const messageData = {
+      userId: userdata.id.toString(),
+      name: userdata.name || userdata.username || "Anonymous",
+      content,
+      timestamp: new Date().toISOString(),
+      targetUserId: targetUserId.toString(),
+    };
+
+    // Emit private message to server
+    socket.emit("private message", messageData);
+  };
+
+  const handleUserClick = (user: User) => {
+    setSelectedUser(user);
+    setIsPrivateModalOpen(true);
+
+    // Mark messages as read
+    setConversations((prev) =>
+      prev.map((c) => (c.user.id === user.id ? { ...c, unreadCount: 0 } : c))
+    );
+  };
+
+  const handleClosePrivateModal = () => {
+    setIsPrivateModalOpen(false);
+    setSelectedUser(null);
+  };
+
+  const handleConversationClick = (user: User) => {
+    handleUserClick(user);
+    setIsConversationsVisible(false);
+  };
+
+  if (!userdata.id) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="flex h-screen w-full bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -112,9 +244,26 @@ const ChatRoom: React.FC = () => {
               </span>
             </div>
           </div>
-        </div>
+        </div>{" "}
         <div className="p-4 h-full">
-          <UserList currentUserId={userdata.id} users={users} />
+          <div className="bg-gradient-to-b from-gray-50 to-gray-100 rounded-xl p-5 h-full overflow-y-auto shadow-inner">
+            <h3 className="text-lg font-bold text-gray-800 border-b-2 border-blue-200 pb-3 mb-5">
+              Online Users ({users.filter((u) => u.isOnline).length})
+            </h3>
+            <div className="flex flex-col gap-3">
+              {users?.map((user) => (
+                <UserListItem
+                  key={user.id}
+                  user={user}
+                  currentUserId={userdata.id?.toString() || ""}
+                  onUserClick={handleUserClick}
+                  hasUnreadMessages={conversations.some(
+                    (c) => c.user.id === user.id && c.unreadCount > 0
+                  )}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -130,12 +279,33 @@ const ChatRoom: React.FC = () => {
         </div>
         {/* Messages */}
         <MessageList messages={messages} currentUserId={userdata.id} />{" "}
-        {/* Message Input */}
+        {/* Message Input */}{" "}
         <MessageInput
           onSendMessage={handleSendMessage}
           disabled={!isConnected}
         />
       </div>
+
+      {/* Private Message Modal */}
+      <PrivateMessageModal
+        isOpen={isPrivateModalOpen}
+        onClose={handleClosePrivateModal}
+        targetUser={selectedUser}
+        currentUserId={userdata.id?.toString() || ""}
+        messages={
+          selectedUser ? privateMessages[selectedUser.id.toString()] || [] : []
+        }
+        onSendMessage={handleSendPrivateMessage}
+        isConnected={isConnected}
+      />
+
+      {/* Private Messages List */}
+      <PrivateMessagesList
+        conversations={conversations}
+        onConversationClick={handleConversationClick}
+        isVisible={isConversationsVisible}
+        onToggle={() => setIsConversationsVisible(!isConversationsVisible)}
+      />
     </div>
   );
 };

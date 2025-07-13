@@ -24,4 +24,21 @@ model User {
   isOnline   Boolean @default(false)
   avatar String?
   createdAt DateTime @default(now())
+
+  messagesSent     Messages[] @relation("SentMessages")
+  messagesReceived Messages[] @relation("ReceivedMessages")
+}
+
+
+model Messages {
+  id         Int      @id @default(autoincrement())
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  senderId   Int
+
+  receiver   User?    @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  receiverId Int?
+
+  content    String
+  isGlobal   Boolean  @default(false)
+  createdAt  DateTime @default(now())
 }

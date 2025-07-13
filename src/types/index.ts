@@ -12,7 +12,7 @@ export interface Message {
   username: string;
   content: string;
   timestamp: Date;
-  type: "text" | "system";
+  type: "text" | "system" | "private";
 }
 
 export interface Room {

@@ -1,12 +1,13 @@
 import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
 import express from "express";
 import { Server as SocketIOServer } from "socket.io";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import http from "http";
-import { on } from "events";
+
+import userRouter from "./routes/userRoutes.js";
+import messageRouter from "./routes/messageRoutes.js";
 
 dotenv.config();
 const prisma = new PrismaClient();
@@ -50,7 +51,7 @@ io.on("connection", (socket) => {
       // ✅ Notify all connected clients that a new user is online
       const onlineUsers = await prisma.user.findMany({
         where: { isOnline: true },
-        select: { id: true, name: true }, // select only what you need
+        select: { id: true, name: true },
       });
 
       console.log(onlineUsers);
@@ -62,8 +63,56 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("chat message", (msg) => {
-    io.emit("chat message", msg); // Broadcast to all clients
+  socket.on("Global message", async (msg) => {
+    // Validation check
+    if (!msg || !msg.content || !msg.userId) {
+      console.error("Invalid message data:", msg);
+      return;
+    }
+
+    try {
+      // Save message to the database
+      const savedMessage = await prisma.messages.create({
+        data: {
+          content: msg.content,
+          senderId: parseInt(msg.userId),
+          receiverId: null, // No receiver for global message
+          isGlobal: true,
+        },
+        include: {
+          sender: true, // Optional: include sender details (e.g. name, avatar)
+        },
+      });
+
+      console.log("Saved to database:", savedMessage);
+
+      // Broadcast to all connected clients
+      io.emit("Global message", savedMessage);
+    } catch (error) {
+      console.error("Error saving global message:", error);
+    }
+  });
+
+  socket.on("Private message", async (msg) => {
+    if (!msg || !msg.content || !msg.senderId || !msg.receiverId) {
+      console.error("Invalid private message data:", msg);
+      return;
+    }
+
+    try {
+      const message = await prisma.Messages.create({
+        data: {
+          content: msg.content,
+          senderId: msg.senderId,
+          receiverId: msg.receiverId,
+        },
+      });
+
+      // Emit the private message to the intended recipient
+      socket.to(msg.receiverId).emit("Private message", message);
+    } catch (err) {
+      console.error("Error sending private message:", err);
+    }
   });
 
   socket.on("disconnect", async () => {
@@ -107,98 +156,8 @@ server.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
 
-app.post("/user/register", async (req, res) => {
-  const { name, email, password, avatar } = req.body;
-
-  // Basic validation
-  if (!name || !email || !password) {
-    return res
-      .status(400)
-      .json({ error: "Name, email, and password are required." });
-  }
-
-  try {
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({ error: "Email already in use." });
-    }
-
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create the user
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        avatar: avatar || null, // Optional avatar field
-      },
-    });
-
-    res.status(201).json({
-      message: "User registered successfully",
-      user: { id: user.id, email: user.email },
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-app.post("/user/login", async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: "Email and password are required." });
-  }
-  try {
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return res.status(400).json({ error: "Invalid email or password." });
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(400).json({ error: "Invalid email or password." });
-    }
-
-    res.status(200).json({
-      message: "Login successful",
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatar: user.avatar,
-        createdAt: user.createdAt,
-      },
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// get all users
-app.get("/users", async (req, res) => {
-  try {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        avatar: true,
-        createdAt: true,
-        isOnline: true,
-        socketId: true,
-      },
-    });
-    res.status(200).json({ result: users.length, users });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
+app.use("/user", userRouter);
+app.use("/messages", messageRouter);
 
 // ****************************************************************
 // import { connection } from "./db.js";

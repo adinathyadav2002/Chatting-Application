@@ -1,15 +1,24 @@
 import { createContext, useContext, useState } from "react";
 
-const UserContext = createContext();
-
 interface userDataType {
   id: number | null;
   username: string;
+  name?: string;
   password?: string;
   isOnline: boolean;
   avatar?: string;
   socketId?: string | null;
 }
+
+interface UserContextType {
+  userdata: userDataType;
+  handleUpdateUser: (user: userDataType) => void;
+  handleUserData: (user: userDataType) => void;
+  isLoggedIn: boolean;
+  setIsLoggedIn: (isLoggedIn: boolean) => void;
+}
+
+const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserContextProvider({
   children,
@@ -51,9 +60,10 @@ export function UserContextProvider({
   );
 }
 
-export function useUserContext() {
+export function useUserContext(): UserContextType {
   const context = useContext(UserContext);
-  if (!context)
-    return new Error("The user context used outside the user context Provider");
+  if (!context) {
+    throw new Error("useUserContext must be used within a UserContextProvider");
+  }
   return context;
 }
