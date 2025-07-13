@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from "react";
-import type { GlobalMessages, Message, SocketMessage, User } from "../types";
+import type {
+  GlobalMessages,
+  Message,
+  SocketMessage,
+  User,
+  PrivateMessage,
+} from "../types";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import UserListItem from "./UserListItem";
@@ -13,7 +19,7 @@ import { messageServices } from "../services/messageServices";
 
 const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [privateMessages, setPrivateMessages] = useState<Message[]>([]);
+  const [privateMessages, setPrivateMessages] = useState<PrivateMessage[]>([]);
   const [conversations, setConversations] = useState<
     Array<{
       user: User;
@@ -23,6 +29,8 @@ const ChatRoom: React.FC = () => {
     }>
   >([]);
   const [isPrivateModalOpen, setIsPrivateModalOpen] = useState(false);
+
+  // for private chat user
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isConversationsVisible, setIsConversationsVisible] = useState(false);
 
@@ -55,6 +63,32 @@ const ChatRoom: React.FC = () => {
     };
 
     fetchGlobalMessages();
+  }, []);
+
+  useEffect(() => {
+    if (!userdata.id) return;
+
+    const fetchPrivateMessages = async () => {
+      try {
+        const response = await messageServices.getPrivateMessages(userdata.id);
+        const newPrivateMessages: PrivateMessage[] = response.map(
+          (msg: GlobalMessages) => ({
+            id: msg.id,
+            senderId: msg.sender.id || "unknown",
+            receiverId: msg.receiver.id || "unknown",
+            content: msg.content,
+            timestamp: new Date(msg.createdAt),
+            // isRead: false,
+          })
+        );
+
+        setPrivateMessages(() => [...newPrivateMessages]);
+      } catch (error) {
+        console.error("Error fetching private messages:", error);
+      }
+    };
+
+    fetchPrivateMessages();
   }, []);
 
   useEffect(() => {
@@ -96,8 +130,6 @@ const ChatRoom: React.FC = () => {
       return;
     }
 
-    console.log("called ");
-
     // Listen for incoming global messages
     socket.on("Global message", (messageData: SocketMessage) => {
       const newMessage: Message = {
@@ -112,27 +144,24 @@ const ChatRoom: React.FC = () => {
       setMessages((prev) => [...prev, newMessage]);
     });
 
-    // Listen for private messages
-    // socket.to(msg.receiverId).emit("Private message", message);
     socket.on("Private message", (messageData) => {
-      const newMessage: Message = {
+      console.log(messageData, "Received private message data");
+      const newMessage: PrivateMessage = {
         id: Date.now().toString(),
-        userId: messageData.senderId || "unknown",
-        username: messageData.name || "Anonymous",
+        senderId: messageData.senderId || "unknown",
+        receiverId: messageData.receiverId || "unknown",
         content: messageData.content,
-        timestamp: new Date(messageData.timestamp),
-        type: "private",
+        // timestamp: new Date().toISOString() this is passed in messagedata.timestamp,
+        timestamp: new Date(messageData.createdAt),
       };
 
+      console.log("Received private message:", messageData.timestamp);
       const otherUserId =
         messageData.senderId.toString() === userdata.id?.toString()
           ? messageData.receiverId.toString()
           : messageData.senderId.toString();
 
-      setPrivateMessages((prev) => ({
-        ...prev,
-        [otherUserId]: [...(prev[otherUserId] || []), newMessage],
-      }));
+      setPrivateMessages((prev) => [...prev, newMessage]);
 
       // Update or create conversation preview
       const user = users.find((u) => u.id.toString() === otherUserId);
@@ -206,20 +235,21 @@ const ChatRoom: React.FC = () => {
     }
 
     const messageData = {
-      senderId: userdata.id.toString(),
-      name: userdata.name || userdata.username || "Anonymous",
+      name: userdata.name || "Anonymous",
       content,
-      timestamp: new Date().toISOString(),
+      senderId: userdata.id.toString(),
       receiverId: targetUserId.toString(),
+      // give timestamp as current time
+      timestamp: new Date().toISOString(),
     };
 
-    console.log("Sending private message:", messageData);
+    console.log(new Date().toISOString());
 
-    // Emit private message to server
     socket.emit("Private message", messageData);
   };
 
   const handleUserClick = (user: User) => {
+    // console.log(user);
     setSelectedUser(user);
     setIsPrivateModalOpen(true);
 
@@ -236,6 +266,7 @@ const ChatRoom: React.FC = () => {
 
   const handleConversationClick = (user: User) => {
     handleUserClick(user);
+
     setIsConversationsVisible(false);
   };
 
@@ -305,20 +336,26 @@ const ChatRoom: React.FC = () => {
         />
       </div>
 
-      {/* Private Message Modal */}
       <PrivateMessageModal
         isOpen={isPrivateModalOpen}
         onClose={handleClosePrivateModal}
         targetUser={selectedUser}
         currentUserId={userdata.id?.toString() || ""}
         messages={
-          selectedUser ? privateMessages[selectedUser.id.toString()] || [] : []
+          selectedUser
+            ? privateMessages?.filter(
+                (msg) =>
+                  (msg.receiverId === selectedUser.id &&
+                    msg.senderId === userdata.id) ||
+                  (msg.senderId === selectedUser.id &&
+                    msg.receiverId === userdata.id)
+              ) || []
+            : []
         }
         onSendMessage={handleSendPrivateMessage}
         isConnected={isConnected}
       />
 
-      {/* Private Messages List */}
       <PrivateMessagesList
         conversations={conversations}
         onConversationClick={handleConversationClick}

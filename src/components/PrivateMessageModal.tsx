@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import type { User, Message } from "../types";
+import type { User, PrivateMessage } from "../types";
 import MessageInput from "./MessageInput";
 
 interface PrivateMessageModalProps {
@@ -7,7 +7,7 @@ interface PrivateMessageModalProps {
   onClose: () => void;
   targetUser: User | null;
   currentUserId: string | number;
-  messages: Message[];
+  messages: PrivateMessage[];
   onSendMessage: (content: string, targetUserId: string | number) => void;
   isConnected: boolean;
 }
@@ -22,6 +22,7 @@ const PrivateMessageModal: React.FC<PrivateMessageModalProps> = ({
   isConnected,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  console.log(messages);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -33,7 +34,7 @@ const PrivateMessageModal: React.FC<PrivateMessageModalProps> = ({
 
   const handleSendMessage = (content: string) => {
     if (targetUser) {
-      onSendMessage(content, targetUser.id);
+      onSendMessage(content, targetUser?.id);
     }
   };
 
@@ -61,18 +62,18 @@ const PrivateMessageModal: React.FC<PrivateMessageModalProps> = ({
           <div className="flex items-center gap-3">
             <div className="relative">
               <span className="text-2xl w-12 h-12 flex items-center justify-center bg-white bg-opacity-20 rounded-full">
-                {targetUser.avatar || "👤"}
+                {targetUser?.avatar || "👤"}
               </span>
               <span
                 className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
-                  targetUser.isOnline ? "bg-green-400" : "bg-gray-400"
+                  targetUser?.isOnline ? "bg-green-400" : "bg-gray-400"
                 }`}
               />
             </div>
             <div>
-              <h3 className="text-lg font-semibold">{targetUser.name}</h3>
+              <h3 className="text-lg font-semibold">{targetUser?.name}</h3>
               <p className="text-sm text-blue-100">
-                {targetUser.isOnline ? "Online" : "Offline"}
+                {targetUser?.isOnline ? "Online" : "Offline"}
               </p>
             </div>
           </div>
@@ -89,12 +90,12 @@ const PrivateMessageModal: React.FC<PrivateMessageModalProps> = ({
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-500">
               <span className="text-4xl mb-2">💬</span>
-              <p>Start a conversation with {targetUser.name}</p>
+              <p>Start a conversation with {targetUser?.name}</p>
             </div>
           ) : (
             messages.map((message) => {
               const isOwnMessage =
-                message.userId.toString() === currentUserId.toString();
+                message.senderId.toString() === currentUserId.toString();
 
               return (
                 <div
@@ -131,11 +132,11 @@ const PrivateMessageModal: React.FC<PrivateMessageModalProps> = ({
         <div className="border-t border-gray-200">
           <MessageInput
             onSendMessage={handleSendMessage}
-            disabled={!isConnected || !targetUser.isOnline}
+            disabled={!isConnected || !targetUser?.isOnline}
           />
-          {!targetUser.isOnline && (
+          {!targetUser?.isOnline && (
             <div className="px-6 py-2 text-xs text-gray-500 text-center bg-gray-50">
-              {targetUser.name} is offline
+              {targetUser?.name} is offline
             </div>
           )}
         </div>

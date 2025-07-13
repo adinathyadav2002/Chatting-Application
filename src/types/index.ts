@@ -15,6 +15,15 @@ export interface Message {
   type: "text" | "system" | "private";
 }
 
+export interface PrivateMessage {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  timestamp: Date;
+  // isRead: boolean;
+}
+
 export interface Room {
   id: string;
   name: string;
