@@ -9,17 +9,17 @@ import Register from "./pages/Register";
 function App() {
   return (
     <div className="App">
-      <UserContextProvider>
-        <SocketProvider>
-          <BrowserRouter>
+      <BrowserRouter>
+        <UserContextProvider>
+          <SocketProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route path="/home" element={<Home />} />
+              <Route path="/" element={<Home />} />
               <Route path="/register" element={<Register />} />
             </Routes>
-          </BrowserRouter>
-        </SocketProvider>
-      </UserContextProvider>
+          </SocketProvider>
+        </UserContextProvider>
+      </BrowserRouter>
     </div>
   );
 }

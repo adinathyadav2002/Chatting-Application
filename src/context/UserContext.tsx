@@ -1,10 +1,11 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import userServices from "../services/userServices";
+import { useNavigate } from "react-router-dom";
 
 interface userDataType {
   id: number | null;
-  username: string;
   name?: string;
-  password?: string;
+  email?: string;
   isOnline: boolean;
   avatar?: string;
   socketId?: string | null;
@@ -27,9 +28,7 @@ export function UserContextProvider({
 }) {
   const [userdata, setUserdata] = useState<userDataType>({
     id: null,
-    username: "",
     isOnline: false,
-    socketId: null,
   });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -40,10 +39,7 @@ export function UserContextProvider({
     }));
   };
 
-  // given id set socketId for user
-  // const setSocketIdForUser = (id: string, socketId: string) => {
-  //   setUserdata((prev) => ({ ...prev, socketId }));
-  // };
+  // get user data from api
 
   return (
     <UserContext.Provider

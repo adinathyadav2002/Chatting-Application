@@ -16,6 +16,7 @@ import { useUserContext } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
 import userServices from "../services/userServices";
 import { messageServices } from "../services/messageServices";
+import type { Axios } from "axios";
 
 const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -34,15 +35,31 @@ const ChatRoom: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isConversationsVisible, setIsConversationsVisible] = useState(false);
 
-  const { userdata, isLoggedIn } = useUserContext();
+  const { userdata, isLoggedIn, handleUpdateUser, setIsLoggedIn } =
+    useUserContext();
   const { socket, isConnected } = useSocket();
   const navigate = useNavigate();
   const [users, setUsers] = React.useState<User[]>([]);
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const result = await userServices.getUserByToken();
+      console.log(result);
+      if (result.success) {
+        const user = result?.user;
+        handleUpdateUser(user);
+        console.log(user);
+        setIsLoggedIn(true);
+      } else {
+        setIsLoggedIn(false);
+        navigate("/login");
+      }
+    };
+    fetchUserData();
+  }, []);
+
   // fetch global messages
   useEffect(() => {
-    if (!userdata.id) return;
-
     const fetchGlobalMessages = async () => {
       try {
         const response = await messageServices.getGlobalMessages();
@@ -63,13 +80,13 @@ const ChatRoom: React.FC = () => {
     };
 
     fetchGlobalMessages();
-  }, []);
+  }, [userdata]);
 
   useEffect(() => {
-    if (!userdata.id) return;
-
+    // Fetch private messages for the current user
     const fetchPrivateMessages = async () => {
       try {
+        console.log(userdata.id, "Fetching private messages for user ID");
         const response = await messageServices.getPrivateMessages(userdata.id);
         const newPrivateMessages: PrivateMessage[] = response.map(
           (msg: GlobalMessages) => ({
@@ -89,7 +106,7 @@ const ChatRoom: React.FC = () => {
     };
 
     fetchPrivateMessages();
-  }, []);
+  }, [userdata]);
 
   useEffect(() => {
     if (!socket) return;
@@ -111,24 +128,26 @@ const ChatRoom: React.FC = () => {
     };
   }, [socket]);
 
+  // Fetch all users on component mount
   useEffect(() => {
     const fetchUsers = async () => {
-      const response = await userServices.getAllUsers();
+      try {
+        const response = await userServices.getAllUsers();
 
-      if (response.success) {
-        setUsers(response.users);
+        if (response.success) {
+          setUsers(response.users);
+        }
+      } catch (error) {
+        console.log(error);
+
+        console.error("Error fetching users:", error);
       }
     };
     fetchUsers();
-  }, [socket]);
+  }, [userdata]);
 
   useEffect(() => {
     if (!socket) return;
-
-    if (!isLoggedIn) {
-      navigate("/login");
-      return;
-    }
 
     // Listen for incoming global messages
     socket.on("Global message", (messageData: SocketMessage) => {
@@ -270,9 +289,9 @@ const ChatRoom: React.FC = () => {
     setIsConversationsVisible(false);
   };
 
-  if (!userdata.id) {
-    return <div>Loading...</div>;
-  }
+  // if (!userdata.id) {
+  //   return <div>Loading...</div>;
+  // }
 
   return (
     <div className="flex h-screen w-full bg-gradient-to-br from-blue-50 via-white to-purple-50">

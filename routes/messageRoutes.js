@@ -1,10 +1,11 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
+import { protect } from "../controllers/authController.js";
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.get("/global-messages", async (req, res) => {
+router.get("/global-messages", protect, async (req, res) => {
   try {
     const messages = await prisma.messages.findMany({
       orderBy: { createdAt: "asc" },
@@ -28,7 +29,7 @@ router.get("/global-messages", async (req, res) => {
   }
 });
 
-router.get("/private-messages/:userId", async (req, res) => {
+router.get("/private-messages/:userId", protect, async (req, res) => {
   const userId = parseInt(req.params.userId);
   if (isNaN(userId)) {
     return res.status(400).json({ error: "Invalid user ID" });

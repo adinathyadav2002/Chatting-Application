@@ -1,16 +1,19 @@
+import axios from "axios";
 import type { GlobalMessages } from "../types/index";
 
 class MessageServices {
   async getGlobalMessages(): Promise<GlobalMessages[]> {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/messages/global-messages`
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/messages/global-messages`,
+        {
+          withCredentials: true,
+        }
       );
-      if (!response.ok) {
+      if (response.status !== 200) {
         throw new Error("Failed to fetch messages");
       }
-      const data = await response.json();
-      return data;
+      return response.data;
     } catch (error) {
       console.error("Error fetching messages:", error);
       throw error;
@@ -19,16 +22,18 @@ class MessageServices {
 
   async getPrivateMessages(receiverId: number): Promise<GlobalMessages[]> {
     try {
-      const response = await fetch(
+      const response = await axios.get(
         `${
           import.meta.env.VITE_API_URL
-        }/messages/private-messages/${receiverId}`
+        }/messages/private-messages/${receiverId}`,
+        {
+          withCredentials: true,
+        }
       );
-      if (!response.ok) {
-        throw new Error("Failed to fetch messages");
+      if (response.status !== 200) {
+        throw new Error("Failed to fetch private messages");
       }
-      const data = await response.json();
-      return data;
+      return response.data;
     } catch (error) {
       console.error("Error fetching messages:", error);
       throw error;

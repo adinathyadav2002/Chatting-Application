@@ -1,7 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useUserContext } from "../context/UserContext";
-import { useNavigate } from "react-router-dom";
-// import { useSocket } from "../hooks/useSocket";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import userServices from "../services/userServices";
 import { useSocket } from "../hooks/useSocket";
 
@@ -27,17 +25,9 @@ const Login: React.FC = () => {
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
   const navigate = useNavigate();
-  const { isLoggedIn, userdata, setIsLoggedIn, handleUpdateUser } =
-    useUserContext();
   const { socket, isConnected } = useSocket();
 
   // const { socket } = useSocket();
-
-  useEffect(() => {
-    if (isLoggedIn && userdata && userdata.id) {
-      navigate("/home");
-    }
-  }, [isLoggedIn, navigate]);
 
   const showToastMessage = (message: string, type: "success" | "error") => {
     setToastMessage(message);
@@ -45,6 +35,7 @@ const Login: React.FC = () => {
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -83,10 +74,8 @@ const Login: React.FC = () => {
       socket.emit("user connected", { userId: parseInt(user?.id) });
       // Login successful
       showToastMessage(`Welcome back, ${user?.name}! 🎉`, "success");
-      setIsLoggedIn(true);
       // Update user context
-      handleUpdateUser(user);
-      navigate("/home");
+      navigate("/");
     } else {
       // Login failed
       showToastMessage("Invalid email or password. Please try again.", "error");
@@ -118,8 +107,14 @@ const Login: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl text-white">💬</span>
+            <div className="w-16 h-16  rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl text-white">
+                <img
+                  src="./favicon/apple-touch-icon.png"
+                  alt="logo"
+                  className="w-12 h-12"
+                />
+              </span>
             </div>
             <h1 className="text-2xl font-bold text-gray-800 mb-2">
               Welcome Back
@@ -203,12 +198,12 @@ const Login: React.FC = () => {
           <div className="mt-8 text-center">
             <p className="text-gray-600">
               Don't have an account?{" "}
-              <a
-                href="#"
+              <Link
+                to="/register"
                 className="text-blue-600 hover:text-blue-500 font-semibold transition-colors"
               >
                 Create one
-              </a>
+              </Link>
             </p>
           </div>{" "}
         </div>

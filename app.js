@@ -5,6 +5,8 @@ import { Server as SocketIOServer } from "socket.io";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import http from "http";
+import cookieParser from "cookie-parser";
+import cors from "cors";
 
 import userRouter from "./routes/userRoutes.js";
 import messageRouter from "./routes/messageRoutes.js";
@@ -19,6 +21,7 @@ const app = express();
 const server = http.createServer(app);
 
 app.use(express.json());
+app.use(cookieParser()); // Middleware to parse cookies
 
 const io = new SocketIOServer(server, {
   cors: {
@@ -173,13 +176,22 @@ io.on("connection", (socket) => {
   });
 });
 
+const allowedOrigins = ["http://127.0.0.1:5173", "http://localhost:5173"];
+
 // set origin for CORS
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*"); // Allow all origins, or specify both localhost and network IP
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
-  next();
-});
+app.use(
+  cors({
+    // origin: '*', for all origins
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true, // 🔥 Important: Allows cookies
+  })
+);
 
 const port = process.env.VITE_SERVER_PORT || 4000;
 server.listen(port, () => {

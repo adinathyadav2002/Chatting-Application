@@ -28,11 +28,16 @@ class UserServices {
 
   async loginUser(email: string, password: string) {
     // call axios post request to validate user
+
+    //  res.cookie("jwt", token, cookieOptions); store cookie in browser
     const response = await axios.post(
       `${import.meta.env.VITE_API_URL}/user/login`,
       {
         email,
         password,
+      },
+      {
+        withCredentials: true,
       }
     );
 
@@ -44,10 +49,34 @@ class UserServices {
     }
   }
 
+  async getUserByToken() {
+    // call axios get request to fetch user by token
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/user/getUser`,
+        {
+          withCredentials: true, // Include cookies in the request
+        }
+      );
+      if (response.status === 200) {
+        const user = response.data;
+        return { success: true, user };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.error || "Failed to fetch user data",
+      };
+    }
+  }
+
   async getAllUsers() {
     // call axios get request to fetch all users
     const response = await axios.get(
-      `${import.meta.env.VITE_API_URL}/user/all`
+      `${import.meta.env.VITE_API_URL}/user/all`,
+      {
+        withCredentials: true, // Include cookies in the request
+      }
     );
 
     if (response.status === 200) {
