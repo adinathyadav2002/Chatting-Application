@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import type { Message, SocketMessage, User } from "../types";
+import type { GlobalMessages, Message, SocketMessage, User } from "../types";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import UserListItem from "./UserListItem";
@@ -9,6 +9,7 @@ import { useSocket } from "../hooks/useSocket";
 import { useUserContext } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
 import userServices from "../services/userServices";
+import { messageServices } from "../services/messageServices";
 
 const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -31,6 +32,32 @@ const ChatRoom: React.FC = () => {
   const { socket, isConnected } = useSocket();
   const navigate = useNavigate();
   const [users, setUsers] = React.useState<User[]>([]);
+
+  // fetch global messages
+  useEffect(() => {
+    if (!userdata.id) return;
+
+    const fetchGlobalMessages = async () => {
+      try {
+        const response = await messageServices.getGlobalMessages();
+
+        const newMessages: Message[] = response.map((msg: GlobalMessages) => ({
+          id: msg.id,
+          userId: msg.sender.id || "unknown",
+          username: msg.sender.name || "Anonymous",
+
+          content: msg.content,
+          timestamp: new Date(msg.createdAt),
+          type: "text",
+        }));
+        setMessages(() => [...newMessages]);
+      } catch (error) {
+        console.error("Error fetching global messages:", error);
+      }
+    };
+
+    fetchGlobalMessages();
+  }, []);
 
   useEffect(() => {
     if (!socket) return;
@@ -73,7 +100,6 @@ const ChatRoom: React.FC = () => {
 
     // Listen for incoming global messages
     socket.on("Global message", (messageData: SocketMessage) => {
-      console.log("Received global message:", messageData);
       const newMessage: Message = {
         id: Date.now().toString(),
         userId: messageData.sender.id || "unknown",
@@ -82,8 +108,6 @@ const ChatRoom: React.FC = () => {
         timestamp: new Date(messageData.sender.createdAt),
         type: "text",
       };
-
-      console.log("Received global message:", newMessage);
 
       setMessages((prev) => [...prev, newMessage]);
     });
@@ -165,16 +189,12 @@ const ChatRoom: React.FC = () => {
       return;
     }
 
-    console.log(userdata);
-
     const messageData: SocketMessage = {
       userId: userdata.id.toString(),
       name: userdata.name || "Anonymous",
       content,
       timestamp: new Date().toISOString(),
     };
-
-    console.log(messageData);
 
     // Emit message to server
     socket.emit("Global message", messageData);

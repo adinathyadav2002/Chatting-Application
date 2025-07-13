@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 router.get("/global-messages", async (req, res) => {
   try {
-    const messages = await prisma.message.findMany({
+    const messages = await prisma.messages.findMany({
       orderBy: { createdAt: "asc" },
       // isglobal is true
       where: { isGlobal: true },
@@ -21,7 +21,7 @@ router.get("/global-messages", async (req, res) => {
         isGlobal: true,
       },
     });
-    res.json(messages);
+    res.status(200).json(messages);
   } catch (error) {
     console.error("Error fetching global messages:", error);
     res.status(500).json({ error: "Failed to fetch messages" });

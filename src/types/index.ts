@@ -28,3 +28,17 @@ export interface SocketMessage {
   content: string;
   timestamp: string;
 }
+
+export interface GlobalMessages {
+  id: string;
+  content: string;
+  sender: {
+    id: number;
+    name: string;
+    email: string;
+    socketId?: string;
+  };
+  receiverId: number | null;
+  createdAt: Date;
+  isGlobal: boolean;
+}

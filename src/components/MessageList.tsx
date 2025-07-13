@@ -10,7 +10,6 @@ const MessageList: React.FC<MessageListProps> = ({
   messages,
   currentUserId,
 }) => {
-  console.log("Rendering MessageList with messages:", messages, currentUserId);
   const formatTime = (timestamp: Date) => {
     return timestamp.toLocaleTimeString([], {
       hour: "2-digit",
@@ -22,7 +21,6 @@ const MessageList: React.FC<MessageListProps> = ({
     <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-gray-50 to-white">
       {messages.map((message) => {
         const isOwnMessage = message?.userId === currentUserId;
-        console.log(isOwnMessage, message?.userId, currentUserId);
         return (
           <div
             key={message?.id}
