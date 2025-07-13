@@ -6,6 +6,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import http from "http";
+import { on } from "events";
 
 dotenv.config();
 const prisma = new PrismaClient();
@@ -28,12 +29,68 @@ const io = new SocketIOServer(server, {
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
+  socket.on("user connected", async (userData) => {
+    try {
+      let userId = parseInt(userData.userId);
+      if (isNaN(userId)) {
+        console.error("Invalid user ID:", userId);
+        return;
+      }
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          socketId: socket.id,
+          isOnline: true,
+        },
+      });
+
+      console.log(`User ${userId} is online with socket ID: ${socket.id}`);
+
+      // ✅ Notify all connected clients that a new user is online
+      const onlineUsers = await prisma.user.findMany({
+        where: { isOnline: true },
+        select: { id: true, name: true }, // select only what you need
+      });
+
+      console.log(onlineUsers);
+
+      // io.emit will send to all sockets (including the sender)
+      io.emit("online-users", onlineUsers);
+    } catch (err) {
+      console.error("Error updating user status:", err);
+    }
+  });
+
   socket.on("chat message", (msg) => {
     io.emit("chat message", msg); // Broadcast to all clients
   });
 
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+  socket.on("disconnect", async () => {
+    // remove the socket id from the user and make isOnline false
+    prisma.user
+      .updateMany({
+        where: { socketId: socket.id },
+        data: { isOnline: false, socketId: null },
+      })
+      .then(() => {
+        console.log(`User disconnected: ${socket.id}`);
+      })
+      .catch((err) => {
+        console.error("Error updating user on disconnect:", err);
+      });
+
+    // ✅ send
+    const onlineUsers = await prisma.user.findMany({
+      // is online is true and socketId is not equal to current socket id
+      where: { isOnline: true, socketId: { not: socket.id } },
+      select: { id: true, name: true }, // select only what you need
+    });
+
+    console.log(onlineUsers);
+
+    // io.emit will send to all sockets (including the sender)
+    io.emit("online-users", onlineUsers);
   });
 });
 
@@ -109,6 +166,7 @@ app.post("/user/login", async (req, res) => {
     res.status(200).json({
       message: "Login successful",
       user: {
+        id: user.id,
         email: user.email,
         name: user.name,
         avatar: user.avatar,

@@ -1,37 +1,21 @@
 import React from "react";
 import type { User } from "../types";
-import userServices from "../services/userServices";
 
 interface UserListProps {
   users: User[];
-  currentUserId: string;
+  currentUserId: number;
 }
 
-const UserList: React.FC<UserListProps> = ({ currentUserId }) => {
-  const [users, setUsers] = React.useState<User[]>([]);
-
-  React.useEffect(() => {
-    const fetchUsers = async () => {
-      const response = await userServices.getAllUsers();
-      console.log(response);
-      if (response.success) {
-        setUsers(response.users);
-      }
-    };
-    fetchUsers();
-  }, []);
-
-  console.log(users);
-
+const UserList: React.FC<UserListProps> = ({ currentUserId, users }) => {
   return (
     <div className="bg-gradient-to-b from-gray-50 to-gray-100 rounded-xl p-5 h-full overflow-y-auto shadow-inner">
       <h3 className="text-lg font-bold text-gray-800 border-b-2 border-blue-200 pb-3 mb-5">
-        {/* Online Users ({users.filter((u) => u.isOnline).length}) */}
+        Online Users ({users.filter((u) => u.isOnline).length})
       </h3>
       <div className="flex flex-col gap-3">
         {users?.map((user) => (
           <div
-            key={user.id}
+            key={user?.id}
             className={`flex items-center gap-3 p-4 rounded-xl bg-white border transition-all duration-300 hover:bg-blue-50 hover:translate-x-1 hover:shadow-md cursor-pointer ${
               user.id === currentUserId
                 ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 shadow-md"
@@ -42,7 +26,7 @@ const UserList: React.FC<UserListProps> = ({ currentUserId }) => {
               {user.avatar}
             </span>
             <span className="flex-1 font-semibold text-gray-800">
-              {user.username}
+              {user.name}
             </span>
             <span
               className={`text-sm transition-all duration-200 ${

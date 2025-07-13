@@ -3,12 +3,12 @@ import { createContext, useContext, useState } from "react";
 const UserContext = createContext();
 
 interface userDataType {
-  id: string;
+  id: number | null;
   username: string;
   password?: string;
   isOnline: boolean;
   avatar?: string;
-  socketId?: string;
+  socketId?: string | null;
 }
 
 export function UserContextProvider({
@@ -17,10 +17,10 @@ export function UserContextProvider({
   children: React.ReactNode;
 }) {
   const [userdata, setUserdata] = useState<userDataType>({
-    id: "",
+    id: null,
     username: "",
     isOnline: false,
-    socketId: "",
+    socketId: null,
   });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 

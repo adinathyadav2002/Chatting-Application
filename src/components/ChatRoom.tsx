@@ -1,17 +1,50 @@
 import React, { useState, useEffect } from "react";
-import type { Message, SocketMessage } from "../types";
+import type { Message, SocketMessage, User } from "../types";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import UserList from "./UserList";
 import { useSocket } from "../hooks/useSocket";
 import { useUserContext } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
+import userServices from "../services/userServices";
 
 const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const { userdata, isLoggedIn } = useUserContext();
   const { socket, isConnected } = useSocket();
   const navigate = useNavigate();
+  const [users, setUsers] = React.useState<User[]>([]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("online-users", (onlineUsers) => {
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          onlineUsers.find(
+            (u: { id: number; name: string }) => u.id === user.id
+          )
+            ? { ...user, isOnline: true }
+            : user
+        )
+      );
+    });
+
+    return () => {
+      socket.off("online-users");
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const response = await userServices.getAllUsers();
+
+      if (response.success) {
+        setUsers(response.users);
+      }
+    };
+    fetchUsers();
+  }, [socket]);
 
   useEffect(() => {
     if (!socket) return;
@@ -27,7 +60,7 @@ const ChatRoom: React.FC = () => {
       const newMessage: Message = {
         id: Date.now().toString(),
         userId: messageData.userId || "unknown",
-        username: messageData.username || "Anonymous",
+        username: messageData.name || "Anonymous",
         content: messageData.content,
         timestamp: new Date(messageData.timestamp),
         type: "text",
@@ -50,7 +83,7 @@ const ChatRoom: React.FC = () => {
 
     const messageData: SocketMessage = {
       userId: userdata.id,
-      username: userdata.username,
+      name: userdata.name,
       content,
       timestamp: new Date().toISOString(),
     };
@@ -81,7 +114,7 @@ const ChatRoom: React.FC = () => {
           </div>
         </div>
         <div className="p-4 h-full">
-          <UserList userdataId={userdata.id} />
+          <UserList currentUserId={userdata.id} users={users} />
         </div>
       </div>
 
@@ -92,11 +125,11 @@ const ChatRoom: React.FC = () => {
           <h3 className="text-xl font-bold text-gray-800">General Chat</h3>
           <p className="text-sm text-gray-600 flex items-center gap-2">
             <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-            {/* {users.filter((u) => u.isOnline).length + 1} users online */}
+            {users.filter((u) => u.isOnline).length} users online
           </p>
         </div>
         {/* Messages */}
-        <MessageList messages={messages} userdataId={userdata.id} />{" "}
+        <MessageList messages={messages} currentUserId={userdata.id} />{" "}
         {/* Message Input */}
         <MessageInput
           onSendMessage={handleSendMessage}

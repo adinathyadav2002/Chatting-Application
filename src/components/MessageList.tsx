@@ -10,20 +10,22 @@ const MessageList: React.FC<MessageListProps> = ({
   messages,
   currentUserId,
 }) => {
+  console.log(currentUserId, messages);
   const formatTime = (timestamp: Date) => {
     return timestamp.toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
   };
+
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-gray-50 to-white">
       {messages.map((message) => {
-        const isOwnMessage = message.userId === currentUserId;
+        const isOwnMessage = message?.userId === currentUserId;
 
         return (
           <div
-            key={message.id}
+            key={message?.id}
             className={`flex ${
               isOwnMessage ? "justify-end" : "justify-start"
             } animate-fadeIn`}
@@ -37,16 +39,16 @@ const MessageList: React.FC<MessageListProps> = ({
             >
               {!isOwnMessage && (
                 <div className="text-xs font-semibold mb-1 text-blue-600">
-                  {message.username}
+                  {message?.username}
                 </div>
               )}
-              <div className="text-sm leading-relaxed">{message.content}</div>
+              <div className="text-sm leading-relaxed">{message?.content}</div>
               <div
                 className={`text-xs mt-2 ${
                   isOwnMessage ? "text-blue-100" : "text-gray-400"
                 }`}
               >
-                {formatTime(message.timestamp)}
+                {formatTime(message?.timestamp)}
               </div>
             </div>
           </div>

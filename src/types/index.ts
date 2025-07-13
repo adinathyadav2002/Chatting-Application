@@ -1,6 +1,6 @@
 export interface User {
-  id: string;
-  username: string;
+  id: number;
+  name: string;
   password?: string; // Optional for dummy data, not used in production
   isOnline: boolean;
   avatar?: string;
@@ -24,7 +24,7 @@ export interface Room {
 
 export interface SocketMessage {
   userId: string;
-  username: string;
+  name: string;
   content: string;
   timestamp: string;
 }

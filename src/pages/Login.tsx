@@ -3,8 +3,10 @@ import { useUserContext } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
 // import { useSocket } from "../hooks/useSocket";
 import userServices from "../services/userServices";
+import { useSocket } from "../hooks/useSocket";
 
 interface userDataType {
+  id: number;
   email: string;
   name: string;
   createdAt?: Date;
@@ -27,6 +29,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { isLoggedIn, userdata, setIsLoggedIn, handleUpdateUser } =
     useUserContext();
+  const { socket, isConnected } = useSocket();
 
   // const { socket } = useSocket();
 
@@ -46,16 +49,39 @@ const Login: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
 
+    if (!socket || !isConnected) {
+      showToastMessage("Socket connection is not established.", "error");
+      setIsLoading(false);
+      return;
+    }
+
     const response: loginResponseType = await userServices.loginUser(
-      "a@gmail.com",
-      "Test@123"
+      email.trim(),
+      password.trim()
     );
 
     const user = response?.user;
 
+    // Emit user connected event with socket ID
+    // socket.on("user connected", async (userId) => {
+    //   try {
+    //     // Update user's socketId and isOnline status
+    //     await prisma.user.update({
+    //       where: { id: userId },
+    //       data: {
+    //         socketId: socket.id, // Update socketId
+    //         isOnline: true, // Set user as online
+    //       },
+    //     });
+
+    //   } catch (err) {
+    //     console.error("Error updating user status:", err);
+    //   }
+    // });
+
     if (user) {
+      socket.emit("user connected", { userId: parseInt(user?.id) });
       // Login successful
-      console.log("Login successful:", user);
       showToastMessage(`Welcome back, ${user?.name}! 🎉`, "success");
       setIsLoggedIn(true);
       // Update user context
@@ -113,8 +139,7 @@ const Login: React.FC = () => {
               <input
                 id="email"
                 type="email"
-                // value={email}
-                value="a@gmail.com"
+                value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
@@ -133,8 +158,7 @@ const Login: React.FC = () => {
               <input
                 id="password"
                 type="password"
-                // value={password}
-                value="Test@123"
+                value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
