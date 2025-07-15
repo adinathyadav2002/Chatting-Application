@@ -147,4 +147,23 @@ router.get("/all", protect, async (req, res) => {
   }
 });
 
+router.post("/logout", protect, async (req, res) => {
+  // also toggle isOnline to false and socketId to null
+  try {
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { isOnline: false, socketId: null },
+    });
+  } catch (err) {
+    console.error(err);
+  }
+  try {
+    res.clearCookie("jwt");
+    res.status(200).json({ message: "Logout successful" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 export default router;

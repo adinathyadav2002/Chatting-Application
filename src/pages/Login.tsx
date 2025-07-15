@@ -53,23 +53,6 @@ const Login: React.FC = () => {
 
     const user = response?.user;
 
-    // Emit user connected event with socket ID
-    // socket.on("user connected", async (userId) => {
-    //   try {
-    //     // Update user's socketId and isOnline status
-    //     await prisma.user.update({
-    //       where: { id: userId },
-    //       data: {
-    //         socketId: socket.id, // Update socketId
-    //         isOnline: true, // Set user as online
-    //       },
-    //     });
-
-    //   } catch (err) {
-    //     console.error("Error updating user status:", err);
-    //   }
-    // });
-
     if (user) {
       socket.emit("user connected", { userId: parseInt(user?.id) });
       // Login successful

@@ -16,7 +16,6 @@ import { useUserContext } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
 import userServices from "../services/userServices";
 import { messageServices } from "../services/messageServices";
-import type { Axios } from "axios";
 
 const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -40,23 +39,6 @@ const ChatRoom: React.FC = () => {
   const { socket, isConnected } = useSocket();
   const navigate = useNavigate();
   const [users, setUsers] = React.useState<User[]>([]);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const result = await userServices.getUserByToken();
-      console.log(result);
-      if (result.success) {
-        const user = result?.user;
-        handleUpdateUser(user);
-        console.log(user);
-        setIsLoggedIn(true);
-      } else {
-        setIsLoggedIn(false);
-        navigate("/login");
-      }
-    };
-    fetchUserData();
-  }, []);
 
   // fetch global messages
   useEffect(() => {
@@ -86,7 +68,7 @@ const ChatRoom: React.FC = () => {
     // Fetch private messages for the current user
     const fetchPrivateMessages = async () => {
       try {
-        console.log(userdata.id, "Fetching private messages for user ID");
+        if (!userdata.id) return;
         const response = await messageServices.getPrivateMessages(userdata.id);
         const newPrivateMessages: PrivateMessage[] = response.map(
           (msg: GlobalMessages) => ({
@@ -262,8 +244,6 @@ const ChatRoom: React.FC = () => {
       timestamp: new Date().toISOString(),
     };
 
-    console.log(new Date().toISOString());
-
     socket.emit("Private message", messageData);
   };
 
@@ -282,16 +262,27 @@ const ChatRoom: React.FC = () => {
     setIsPrivateModalOpen(false);
     setSelectedUser(null);
   };
-
   const handleConversationClick = (user: User) => {
     handleUserClick(user);
 
     setIsConversationsVisible(false);
   };
+  const handleLogout = async () => {
+    // Remove JWT cookie
 
-  // if (!userdata.id) {
-  //   return <div>Loading...</div>;
-  // }
+    const response = await userServices.logoutUser();
+
+    if (response.success) {
+      socket?.emit("user disconnected", { userId: userdata.id });
+      setIsLoggedIn(false);
+      handleUpdateUser({ id: null, isOnline: false });
+      navigate("/login");
+    } else {
+      console.error("Logout failed:", response.message);
+    }
+
+    setIsLoggedIn(false);
+  };
 
   return (
     <div className="flex h-screen w-full bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -338,13 +329,25 @@ const ChatRoom: React.FC = () => {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col bg-white shadow-xl">
+        {" "}
         {/* Header */}
         <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-white to-gray-50 shadow-sm">
-          <h3 className="text-xl font-bold text-gray-800">General Chat</h3>
-          <p className="text-sm text-gray-600 flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-            {users.filter((u) => u.isOnline).length} users online
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold text-gray-800">General Chat</h3>
+              <p className="text-sm text-gray-600 flex items-center gap-2">
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                {users.filter((u) => u.isOnline).length} users online
+              </p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200 flex items-center gap-2 font-medium"
+            >
+              <span>🚪</span>
+              Logout
+            </button>
+          </div>
         </div>
         {/* Messages */}
         <MessageList messages={messages} currentUserId={userdata.id} />{" "}

@@ -5,21 +5,23 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { UserContextProvider } from "./context/UserContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import NavigationBridge from "./components/NavigationBridge";
 
 function App() {
   return (
     <div className="App">
-      <BrowserRouter>
+      <SocketProvider>
         <UserContextProvider>
-          <SocketProvider>
+          <BrowserRouter>
+            <NavigationBridge />
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/" element={<Home />} />
               <Route path="/register" element={<Register />} />
             </Routes>
-          </SocketProvider>
+          </BrowserRouter>
         </UserContextProvider>
-      </BrowserRouter>
+      </SocketProvider>
     </div>
   );
 }

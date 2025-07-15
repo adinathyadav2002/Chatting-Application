@@ -38,7 +38,7 @@ const MessageList: React.FC<MessageListProps> = ({
       {" "}
       {messages.map((message) => {
         const isOwnMessage =
-          message?.userId.toString() === currentUserId.toString();
+          message?.userId.toString() === currentUserId?.toString();
         return (
           <div
             key={message?.id}

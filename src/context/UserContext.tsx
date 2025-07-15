@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import userServices from "../services/userServices";
-import { useNavigate } from "react-router-dom";
+import { useSocket } from "../hooks/useSocket";
 
 interface userDataType {
   id: number | null;
@@ -17,6 +17,7 @@ interface UserContextType {
   handleUserData: (user: userDataType) => void;
   isLoggedIn: boolean;
   setIsLoggedIn: (isLoggedIn: boolean) => void;
+  setNavigateFn: (navigateFn: ((path: string) => void) | null) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -31,6 +32,10 @@ export function UserContextProvider({
     isOnline: false,
   });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { socket } = useSocket();
+  const [navigateFn, setNavigateFn] = useState<((path: string) => void) | null>(
+    null
+  );
 
   const handleUpdateUser = (user: userDataType) => {
     setUserdata((prev) => ({
@@ -39,7 +44,30 @@ export function UserContextProvider({
     }));
   };
 
-  // get user data from api
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const result = await userServices.getUserByToken();
+      console.log(result);
+      if (result.success) {
+        const user = result?.user;
+        setIsLoggedIn(true);
+        handleUpdateUser({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          isOnline: user.isOnline,
+          avatar: user.avatar,
+          socketId: socket?.id || null,
+        });
+
+        socket?.emit("user connected", { userId: parseInt(user?.id) });
+      } else {
+        setIsLoggedIn(false);
+        navigateFn?.("/login");
+      }
+    };
+    fetchUserData();
+  }, [socket, navigateFn]); // Added socket dependency
 
   return (
     <UserContext.Provider
@@ -49,6 +77,7 @@ export function UserContextProvider({
         handleUserData: setUserdata,
         isLoggedIn,
         setIsLoggedIn,
+        setNavigateFn,
       }}
     >
       {children}

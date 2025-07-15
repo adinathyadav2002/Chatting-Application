@@ -85,6 +85,29 @@ class UserServices {
       return { success: false, message: response.data.error };
     }
   }
+
+  async logoutUser() {
+    // call axios post request to logout user
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/user/logout`,
+        {},
+        {
+          withCredentials: true, // Include cookies in the request
+        }
+      );
+
+      if (response.status === 200) {
+        return { success: true, message: "Logged out successfully" };
+      }
+    } catch (error) {
+      console.error("Error logging out:", error);
+      return {
+        success: false,
+        message: error.response?.data?.error || "Logout failed",
+      };
+    }
+  }
 }
 
 export default new UserServices();
