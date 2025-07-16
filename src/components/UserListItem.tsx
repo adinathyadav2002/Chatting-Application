@@ -1,5 +1,6 @@
 import React from "react";
 import type { User } from "../types";
+import Avatar from "./Avatar";
 
 interface UserListItemProps {
   user: User;
@@ -25,19 +26,17 @@ const UserListItem: React.FC<UserListItemProps> = ({
           : "bg-white border-gray-200 hover:border-blue-200 hover:bg-blue-50 hover:translate-x-1 hover:shadow-md cursor-pointer"
       } ${!user.isOnline ? "opacity-60 grayscale" : ""}`}
     >
+      {" "}
       {/* Avatar */}
       <div className="relative">
-        <span className="text-2xl w-10 h-10 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-full shadow-sm">
-          {user.avatar || "👤"}
-        </span>
-        {/* Online Status Indicator */}
-        <span
-          className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
-            user.isOnline ? "bg-green-400 animate-pulse" : "bg-gray-400"
-          }`}
+        <Avatar
+          type="user"
+          name={user.name}
+          size="md"
+          isOnline={user.isOnline}
+          className="shadow-sm"
         />
       </div>
-
       {/* User Info */}
       <div className="flex-1 min-w-0">
         <span className="font-semibold text-gray-800 truncate block">
@@ -50,7 +49,6 @@ const UserListItem: React.FC<UserListItemProps> = ({
           {user.isOnline ? "Online" : "Offline"}
         </span>
       </div>
-
       {/* Message Icon for non-current users */}
       {!isCurrentUser && (
         <div className="flex items-center gap-2">

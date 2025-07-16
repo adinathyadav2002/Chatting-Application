@@ -1,4 +1,5 @@
 import React from "react";
+import Avatar from "./Avatar";
 import type { User } from "../types";
 
 interface UserListProps {
@@ -22,18 +23,16 @@ const UserList: React.FC<UserListProps> = ({ currentUserId, users }) => {
                 : "border-gray-200 hover:border-blue-200"
             } ${!user.isOnline ? "opacity-60 grayscale" : ""}`}
           >
-            <span className="text-2xl w-10 h-10 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-full shadow-sm">
-              {user.avatar}
-            </span>
+            {" "}
+            <Avatar
+              type="user"
+              name={user.name}
+              size="md"
+              isOnline={user.isOnline}
+              className="shadow-sm"
+            />
             <span className="flex-1 font-semibold text-gray-800">
               {user.name}
-            </span>
-            <span
-              className={`text-sm transition-all duration-200 ${
-                user.isOnline ? "animate-pulse" : ""
-              }`}
-            >
-              {user.isOnline ? "🟢" : "⚫"}
             </span>
           </div>
         ))}

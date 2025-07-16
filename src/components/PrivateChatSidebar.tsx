@@ -1,4 +1,5 @@
 import React from "react";
+import Avatar from "./Avatar";
 import type { User } from "../types";
 
 interface Conversation {
@@ -97,16 +98,15 @@ const PrivateChatSidebar: React.FC<PrivateChatSidebarProps> = ({
                 onClick={() => onConversationClick(conversation.user)}
                 className="flex items-center gap-3 p-4 rounded-xl hover:bg-gray-50 cursor-pointer transition-all duration-200 hover:shadow-md border border-transparent hover:border-blue-100"
               >
+                {" "}
                 {/* Avatar */}
-                <div className="relative">
-                  <span className="text-xl w-12 h-12 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-full shadow-sm">
-                    {conversation.user.avatar || "👤"}
-                  </span>
-                  {conversation.user.isOnline && (
-                    <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse" />
-                  )}
-                </div>
-
+                <Avatar
+                  type="user"
+                  name={conversation.user.name}
+                  size="lg"
+                  isOnline={conversation.user.isOnline}
+                  className="shadow-sm"
+                />
                 {/* Conversation Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">

@@ -62,10 +62,13 @@ class UserServices {
         const user = response.data;
         return { success: true, user };
       }
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
-        message: error.response?.data?.error || "Failed to fetch user data",
+        message:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Failed to fetch user",
       };
     }
   }
@@ -100,11 +103,12 @@ class UserServices {
       if (response.status === 200) {
         return { success: true, message: "Logged out successfully" };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error logging out:", error);
       return {
         success: false,
-        message: error.response?.data?.error || "Logout failed",
+        message:
+          error?.response?.data?.message || error?.message || "Logout failed",
       };
     }
   }

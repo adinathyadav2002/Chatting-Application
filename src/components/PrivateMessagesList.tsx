@@ -1,4 +1,5 @@
 import React from "react";
+import Avatar from "./Avatar";
 import type { User } from "../types";
 
 interface Conversation {
@@ -83,16 +84,14 @@ const PrivateMessagesList: React.FC<PrivateMessagesListProps> = ({
                     onClick={() => onConversationClick(conversation.user)}
                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
                   >
+                    {" "}
                     {/* Avatar */}
-                    <div className="relative">
-                      <span className="text-lg w-10 h-10 flex items-center justify-center bg-gray-100 rounded-full">
-                        {conversation.user.avatar || "👤"}
-                      </span>
-                      {conversation.user.isOnline && (
-                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border border-white" />
-                      )}
-                    </div>
-
+                    <Avatar
+                      type="user"
+                      name={conversation.user.name}
+                      size="md"
+                      isOnline={conversation.user.isOnline}
+                    />
                     {/* Conversation Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
@@ -112,7 +111,6 @@ const PrivateMessagesList: React.FC<PrivateMessagesListProps> = ({
                         </p>
                       )}
                     </div>
-
                     {/* Unread Count */}
                     {conversation.unreadCount > 0 && (
                       <span className="w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">

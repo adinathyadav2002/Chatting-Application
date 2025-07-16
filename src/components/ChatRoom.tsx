@@ -1,16 +1,8 @@
 import React, { useState, useEffect } from "react";
-import type {
-  GlobalMessages,
-  Message,
-  SocketMessage,
-  User,
-  PrivateMessage,
-} from "../types";
+import type { GlobalMessages, Message, User, PrivateMessage } from "../types";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
-import UserListItem from "./UserListItem";
-import PrivateMessageModal from "./PrivateMessageModal";
-import PrivateMessagesList from "./PrivateMessagesList";
+import Avatar from "./Avatar";
 import { useSocket } from "../hooks/useSocket";
 import { useUserContext } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -28,17 +20,15 @@ const ChatRoom: React.FC = () => {
       unreadCount: number;
     }>
   >([]);
-  const [isPrivateModalOpen, setIsPrivateModalOpen] = useState(false);
 
-  // for private chat user
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isConversationsVisible, setIsConversationsVisible] = useState(false);
+  // WhatsApp-like state management
+  const [activeChat, setActiveChat] = useState<"global" | User>("global");
+  const [users, setUsers] = useState<User[]>([]);
 
   const { userdata, isLoggedIn, handleUpdateUser, setIsLoggedIn } =
     useUserContext();
   const { socket, isConnected } = useSocket();
   const navigate = useNavigate();
-  const [users, setUsers] = React.useState<User[]>([]);
 
   // fetch global messages
   useEffect(() => {
@@ -48,9 +38,8 @@ const ChatRoom: React.FC = () => {
 
         const newMessages: Message[] = response.map((msg: GlobalMessages) => ({
           id: msg.id,
-          userId: msg.sender.id || "unknown",
+          userId: (msg.sender.id || "unknown").toString(),
           username: msg.sender.name || "Anonymous",
-
           content: msg.content,
           timestamp: new Date(msg.createdAt),
           type: "text",
@@ -73,11 +62,10 @@ const ChatRoom: React.FC = () => {
         const newPrivateMessages: PrivateMessage[] = response.map(
           (msg: GlobalMessages) => ({
             id: msg.id,
-            senderId: msg.sender.id || "unknown",
-            receiverId: msg.receiver.id || "unknown",
+            senderId: (msg.sender.id || "unknown").toString(),
+            receiverId: (msg.receiverId || "unknown").toString(),
             content: msg.content,
             timestamp: new Date(msg.createdAt),
-            // isRead: false,
           })
         );
 
@@ -92,16 +80,15 @@ const ChatRoom: React.FC = () => {
 
   useEffect(() => {
     if (!socket) return;
-
     socket.on("online-users", (onlineUsers) => {
+      console.log("Received online-users event:", onlineUsers);
       setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          onlineUsers.find(
+        prevUsers.map((user) => {
+          const isOnline = onlineUsers.find(
             (u: { id: number; name: string }) => u.id === user.id
-          )
-            ? { ...user, isOnline: true }
-            : user
-        )
+          );
+          return { ...user, isOnline: !!isOnline };
+        })
       );
     });
 
@@ -120,8 +107,6 @@ const ChatRoom: React.FC = () => {
           setUsers(response.users);
         }
       } catch (error) {
-        console.log(error);
-
         console.error("Error fetching users:", error);
       }
     };
@@ -129,34 +114,39 @@ const ChatRoom: React.FC = () => {
   }, [userdata]);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket) return; // Listen for incoming global messages
+    socket.on(
+      "Global message",
+      (messageData: {
+        sender: any;
+        senderId: string;
+        name: string;
+        content: string;
+        createdAt: string;
+      }) => {
+        console.log(messageData, "Received global message data");
+        const newMessage: any = {
+          id: Date.now().toString(),
+          userId: (messageData.senderId || "unknown").toString(),
+          username: messageData?.sender?.name || "Anonymous",
+          content: messageData.content,
+          timestamp: new Date(messageData.createdAt),
+          type: "text",
+        };
 
-    // Listen for incoming global messages
-    socket.on("Global message", (messageData: SocketMessage) => {
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        userId: messageData.sender.id || "unknown",
-        username: messageData.sender.name || "Anonymous",
-        content: messageData.content,
-        timestamp: new Date(messageData.sender.createdAt),
-        type: "text",
-      };
-
-      setMessages((prev) => [...prev, newMessage]);
-    });
+        setMessages((prev) => [...prev, newMessage]);
+      }
+    );
 
     socket.on("Private message", (messageData) => {
-      console.log(messageData, "Received private message data");
       const newMessage: PrivateMessage = {
         id: Date.now().toString(),
-        senderId: messageData.senderId || "unknown",
-        receiverId: messageData.receiverId || "unknown",
+        senderId: (messageData.senderId || "unknown").toString(),
+        receiverId: (messageData.receiverId || "unknown").toString(),
         content: messageData.content,
-        // timestamp: new Date().toISOString() this is passed in messagedata.timestamp,
         timestamp: new Date(messageData.createdAt),
       };
 
-      console.log("Received private message:", messageData.timestamp);
       const otherUserId =
         messageData.senderId.toString() === userdata.id?.toString()
           ? messageData.receiverId.toString()
@@ -216,174 +206,258 @@ const ChatRoom: React.FC = () => {
       return;
     }
 
-    const messageData: SocketMessage = {
-      userId: userdata.id.toString(),
-      name: userdata.name || "Anonymous",
-      content,
-      timestamp: new Date().toISOString(),
-    };
+    if (activeChat === "global") {
+      const messageData = {
+        userId: userdata.id.toString(),
+        name: userdata.name || "Anonymous",
+        content,
+        timestamp: new Date().toISOString(),
+      };
 
-    // Emit message to server
-    socket.emit("Global message", messageData);
-  };
-
-  const handleSendPrivateMessage = (
-    content: string,
-    targetUserId: string | number
-  ) => {
-    if (!socket || !isConnected || !userdata.id) {
-      return;
-    }
-
-    const messageData = {
-      name: userdata.name || "Anonymous",
-      content,
-      senderId: userdata.id.toString(),
-      receiverId: targetUserId.toString(),
-      // give timestamp as current time
-      timestamp: new Date().toISOString(),
-    };
-
-    socket.emit("Private message", messageData);
-  };
-
-  const handleUserClick = (user: User) => {
-    // console.log(user);
-    setSelectedUser(user);
-    setIsPrivateModalOpen(true);
-
-    // Mark messages as read
-    setConversations((prev) =>
-      prev.map((c) => (c.user.id === user.id ? { ...c, unreadCount: 0 } : c))
-    );
-  };
-
-  const handleClosePrivateModal = () => {
-    setIsPrivateModalOpen(false);
-    setSelectedUser(null);
-  };
-  const handleConversationClick = (user: User) => {
-    handleUserClick(user);
-
-    setIsConversationsVisible(false);
-  };
-  const handleLogout = async () => {
-    // Remove JWT cookie
-
-    const response = await userServices.logoutUser();
-
-    if (response.success) {
-      socket?.emit("user disconnected", { userId: userdata.id });
-      setIsLoggedIn(false);
-      handleUpdateUser({ id: null, isOnline: false });
-      navigate("/login");
+      // Emit message to server
+      socket.emit("Global message", messageData);
     } else {
-      console.error("Logout failed:", response.message);
-    }
+      // Send private message
+      const messageData = {
+        name: userdata.name || "Anonymous",
+        content,
+        senderId: userdata.id.toString(),
+        receiverId: activeChat.id.toString(),
+        timestamp: new Date().toISOString(),
+      };
 
-    setIsLoggedIn(false);
+      socket.emit("Private message", messageData);
+    }
   };
+
+  const handleChatSelect = (chat: "global" | User) => {
+    setActiveChat(chat);
+
+    // Mark messages as read if selecting a private chat
+    if (chat !== "global") {
+      setConversations((prev) =>
+        prev.map((c) => (c.user.id === chat.id ? { ...c, unreadCount: 0 } : c))
+      );
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      const response = await userServices.logoutUser();
+
+      if (response && response.success) {
+        socket?.emit("user disconnected", { userId: userdata.id });
+        setIsLoggedIn(false);
+        handleUpdateUser({ id: null, isOnline: false });
+        navigate("/login");
+      } else {
+        console.error("Logout failed:", response?.message);
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      setIsLoggedIn(false);
+      navigate("/login");
+    }
+  };
+
+  // Get messages for the current active chat
+  const getCurrentMessages = () => {
+    if (activeChat === "global") {
+      return messages;
+    } else {
+      // Convert private messages to Message format for display
+      return privateMessages
+        .filter(
+          (msg) =>
+            (msg.receiverId === activeChat.id.toString() &&
+              msg.senderId === userdata.id?.toString()) ||
+            (msg.senderId === activeChat.id.toString() &&
+              msg.receiverId === userdata.id?.toString())
+        )
+        .map(
+          (msg): Message => ({
+            id: msg.id,
+            userId: msg.senderId,
+            username:
+              users.find((u) => u.id.toString() === msg.senderId)?.name ||
+              "Unknown",
+            content: msg.content,
+            timestamp: msg.timestamp,
+            type: "text",
+          })
+        );
+    }
+  };
+
+  // Get chat header info
+  const getChatHeader = () => {
+    if (activeChat === "global") {
+      return {
+        title: "Global Chat",
+        subtitle: `${users.filter((u) => u.isOnline).length} users online`,
+      };
+    } else {
+      return {
+        title: activeChat.name,
+        subtitle: activeChat.isOnline ? "Online" : "Offline",
+      };
+    }
+  };
+
+  const headerInfo = getChatHeader();
 
   return (
-    <div className="flex h-screen w-full bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Sidebar - User List */}
-      <div className="w-80 border-r border-gray-200 bg-gradient-to-b from-white to-gray-50 shadow-lg">
-        {" "}
-        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-          <h2 className="text-xl font-bold">WebSocket Chat</h2>
-          <div className="flex items-center justify-between mt-2">
-            <p className="text-sm text-blue-100">Real-time messaging</p>
-            <div className="flex items-center gap-2">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  isConnected ? "bg-green-400 animate-pulse" : "bg-red-400"
-                }`}
-              ></span>
-              <span className="text-xs text-blue-100">
-                {isConnected ? "Connected" : "Disconnected"}
-              </span>
-            </div>
-          </div>
-        </div>{" "}
-        <div className="p-4 h-full">
-          <div className="bg-gradient-to-b from-gray-50 to-gray-100 rounded-xl p-5 h-full overflow-y-auto shadow-inner">
-            <h3 className="text-lg font-bold text-gray-800 border-b-2 border-blue-200 pb-3 mb-5">
-              Online Users ({users.filter((u) => u.isOnline).length})
-            </h3>
-            <div className="flex flex-col gap-3">
-              {users?.map((user) => (
-                <UserListItem
-                  key={user.id}
-                  user={user}
-                  currentUserId={userdata.id?.toString() || ""}
-                  onUserClick={handleUserClick}
-                  hasUnreadMessages={conversations.some(
-                    (c) => c.user.id === user.id && c.unreadCount > 0
-                  )}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col bg-white shadow-xl">
-        {" "}
-        {/* Header */}
-        <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-white to-gray-50 shadow-sm">
+    <div className="flex h-screen w-full bg-gray-100">
+      {/* Left Sidebar - Conversations */}
+      <div className="w-80 bg-white border-r border-gray-300 flex flex-col">
+        {/* Sidebar Header */}
+        <div className="p-4 bg-gray-50 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl font-bold text-gray-800">General Chat</h3>
-              <p className="text-sm text-gray-600 flex items-center gap-2">
-                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                {users.filter((u) => u.isOnline).length} users online
-              </p>
-            </div>
+            <h2 className="text-lg font-semibold text-gray-800">Chats</h2>
             <button
               onClick={handleLogout}
-              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200 flex items-center gap-2 font-medium"
+              className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm transition-colors"
             >
-              <span>🚪</span>
               Logout
             </button>
           </div>
+          <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isConnected ? "bg-green-400" : "bg-red-400"
+              }`}
+            ></span>
+            {isConnected ? "Connected" : "Disconnected"}
+          </div>
+        </div>
+
+        {/* Conversations List */}
+        <div className="flex-1 overflow-y-auto">
+          {" "}
+          {/* Global Chat Row */}
+          <div
+            onClick={() => handleChatSelect("global")}
+            className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
+              activeChat === "global"
+                ? "bg-blue-50 border-l-4 border-l-blue-500"
+                : ""
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <Avatar type="global" size="lg" />
+              <div className="flex-1">
+                <h3 className="font-medium text-gray-900">Global Chat</h3>
+                <p className="text-sm text-gray-600">
+                  {users.filter((u) => u.isOnline).length} users online
+                </p>
+              </div>
+            </div>
+          </div>{" "}
+          {/* Private Conversations */}
+          {conversations.map((conversation) => (
+            <div
+              key={conversation.user.id}
+              onClick={() => handleChatSelect(conversation.user)}
+              className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
+                activeChat !== "global" &&
+                activeChat.id === conversation.user.id
+                  ? "bg-blue-50 border-l-4 border-l-blue-500"
+                  : ""
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Avatar
+                  type="user"
+                  name={conversation.user.name}
+                  size="lg"
+                  isOnline={conversation.user.isOnline}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium text-gray-900 truncate">
+                      {conversation.user.name}
+                    </h3>
+                    {conversation.unreadCount > 0 && (
+                      <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                        {conversation.unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  {conversation.lastMessage && (
+                    <p className="text-sm text-gray-600 truncate">
+                      {conversation.lastMessage}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}{" "}
+          {/* Other Users (not in conversations yet) */}
+          {users
+            .filter(
+              (user) =>
+                user.id !== userdata.id &&
+                !conversations.some((c) => c.user.id === user.id)
+            )
+            .map((user) => (
+              <div
+                key={user.id}
+                onClick={() => handleChatSelect(user)}
+                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
+                  activeChat !== "global" && activeChat.id === user.id
+                    ? "bg-blue-50 border-l-4 border-l-blue-500"
+                    : ""
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar
+                    type="user"
+                    name={user.name}
+                    size="lg"
+                    isOnline={user.isOnline}
+                  />
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900">{user.name}</h3>
+                    <p className="text-sm text-gray-600">
+                      {user.isOnline ? "Online" : "Offline"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
+
+      {/* Right Main Chat Area */}
+      <div className="flex-1 flex flex-col bg-white">
+        {" "}
+        {/* Chat Header */}
+        <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <div className="flex items-center gap-3">
+            {activeChat !== "global" ? (
+              <Avatar type="user" name={activeChat.name} size="md" />
+            ) : (
+              <Avatar type="global" size="md" />
+            )}
+            <div>
+              <h3 className="font-semibold text-gray-900">
+                {headerInfo.title}
+              </h3>
+              <p className="text-sm text-gray-600">{headerInfo.subtitle}</p>
+            </div>
+          </div>
         </div>
         {/* Messages */}
-        <MessageList messages={messages} currentUserId={userdata.id} />{" "}
-        {/* Message Input */}{" "}
+        <MessageList
+          messages={getCurrentMessages()}
+          currentUserId={userdata.id || 0}
+        />
+        {/* Message Input */}
         <MessageInput
           onSendMessage={handleSendMessage}
           disabled={!isConnected}
         />
       </div>
-
-      <PrivateMessageModal
-        isOpen={isPrivateModalOpen}
-        onClose={handleClosePrivateModal}
-        targetUser={selectedUser}
-        currentUserId={userdata.id?.toString() || ""}
-        messages={
-          selectedUser
-            ? privateMessages?.filter(
-                (msg) =>
-                  (msg.receiverId === selectedUser.id &&
-                    msg.senderId === userdata.id) ||
-                  (msg.senderId === selectedUser.id &&
-                    msg.receiverId === userdata.id)
-              ) || []
-            : []
-        }
-        onSendMessage={handleSendPrivateMessage}
-        isConnected={isConnected}
-      />
-
-      <PrivateMessagesList
-        conversations={conversations}
-        onConversationClick={handleConversationClick}
-        isVisible={isConversationsVisible}
-        onToggle={() => setIsConversationsVisible(!isConversationsVisible)}
-      />
     </div>
   );
 };

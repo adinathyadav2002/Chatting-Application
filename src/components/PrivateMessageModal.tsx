@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import Avatar from "./Avatar";
 import type { User, PrivateMessage } from "../types";
 import MessageInput from "./MessageInput";
 
@@ -59,17 +60,15 @@ const PrivateMessageModal: React.FC<PrivateMessageModalProps> = ({
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[600px] mx-4 flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-2xl">
+          {" "}
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <span className="text-2xl w-12 h-12 flex items-center justify-center bg-white bg-opacity-20 rounded-full">
-                {targetUser?.avatar || "👤"}
-              </span>
-              <span
-                className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
-                  targetUser?.isOnline ? "bg-green-400" : "bg-gray-400"
-                }`}
-              />
-            </div>
+            <Avatar
+              type="user"
+              name={targetUser?.name}
+              size="lg"
+              isOnline={targetUser?.isOnline}
+              className="bg-white bg-opacity-20"
+            />
             <div>
               <h3 className="text-lg font-semibold">{targetUser?.name}</h3>
               <p className="text-sm text-blue-100">
@@ -77,7 +76,6 @@ const PrivateMessageModal: React.FC<PrivateMessageModalProps> = ({
               </p>
             </div>
           </div>
-
           <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white hover:bg-opacity-20 transition-colors"

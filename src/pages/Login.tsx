@@ -48,13 +48,12 @@ const Login: React.FC = () => {
 
     const response: loginResponseType = await userServices.loginUser(
       email.trim(),
-      "Test@123"
+      password.trim()
     );
 
     const user = response?.user;
-
     if (user) {
-      socket.emit("user connected", { userId: parseInt(user?.id) });
+      socket.emit("user connected", { userId: user?.id });
       // Login successful
       showToastMessage(`Welcome back, ${user?.name}! 🎉`, "success");
       // Update user context
@@ -136,7 +135,7 @@ const Login: React.FC = () => {
               <input
                 id="password"
                 type="password"
-                value="Test@123"
+                value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"

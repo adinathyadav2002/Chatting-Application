@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { User, Message } from "../types";
+import type { User } from "../types";
 import PrivateMessageModal from "./PrivateMessageModal";
 import PrivateChatSidebar from "./PrivateChatSidebar";
 import UserSelector from "./UserSelector";
@@ -15,7 +15,7 @@ interface PrivateMessagingInterfaceProps {
   users: User[];
   currentUserId: string;
   conversations: Conversation[];
-  privateMessages: Record<string, Message[]>;
+  privateMessages: any;
   isConnected: boolean;
   onSendPrivateMessage: (
     content: string,

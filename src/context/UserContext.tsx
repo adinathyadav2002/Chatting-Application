@@ -48,7 +48,7 @@ export function UserContextProvider({
     const fetchUserData = async () => {
       const result = await userServices.getUserByToken();
       console.log(result);
-      if (result.success) {
+      if (result?.success) {
         const user = result?.user;
         setIsLoggedIn(true);
         handleUpdateUser({
@@ -60,7 +60,8 @@ export function UserContextProvider({
           socketId: socket?.id || null,
         });
 
-        socket?.emit("user connected", { userId: parseInt(user?.id) });
+        console.log("Emitting user connected event with userId:", user.id);
+        socket?.emit("user connected", { userId: user?.id });
       } else {
         setIsLoggedIn(false);
         navigateFn?.("/login");

@@ -77,7 +77,7 @@ const Register: React.FC = () => {
         formData.avatar
       );
 
-      if (result.success) {
+      if (result?.success) {
         showToastMessage(
           `Welcome to the chat, ${result.user.name}! 🎉`,
           "success"

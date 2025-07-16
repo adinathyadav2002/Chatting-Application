@@ -103,7 +103,6 @@ router.post("/login", async (req, res) => {
 
 router.get("/getUser", protect, async (req, res) => {
   try {
-    console.log(req.user);
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       select: {

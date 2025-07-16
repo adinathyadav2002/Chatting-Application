@@ -7,11 +7,13 @@ import { dirname } from "path";
 import http from "http";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import morgan from "morgan";
 
 import userRouter from "./routes/userRoutes.js";
 import messageRouter from "./routes/messageRoutes.js";
 
 dotenv.config();
+
 const prisma = new PrismaClient();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -22,6 +24,7 @@ const server = http.createServer(app);
 
 app.use(express.json());
 app.use(cookieParser()); // Middleware to parse cookies
+app.use(morgan("dev")); // HTTP request logger
 
 const io = new SocketIOServer(server, {
   cors: {
@@ -35,7 +38,7 @@ const io = new SocketIOServer(server, {
 });
 
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
+  console.log("New socket connected:", socket.id);
 
   socket.on("user connected", async (userData) => {
     try {
@@ -53,7 +56,7 @@ io.on("connection", (socket) => {
         },
       });
 
-      console.log(`User ${userId} is online with socket ID: ${socket.id}`);
+      console.log(`User ${userId} connected with socket ${socket.id}`);
 
       // ✅ Notify all connected clients that a new user is online
       const onlineUsers = await prisma.user.findMany({
@@ -61,12 +64,44 @@ io.on("connection", (socket) => {
         select: { id: true, name: true },
       });
 
-      console.log(onlineUsers);
-
+      console.log("Emitting online-users to all clients:", onlineUsers);
       // io.emit will send to all sockets (including the sender)
       io.emit("online-users", onlineUsers);
     } catch (err) {
       console.error("Error updating user status:", err);
+    }
+  });
+  socket.on("user disconnected", async (userData) => {
+    try {
+      let userId = parseInt(userData.userId || userData);
+      if (isNaN(userId)) {
+        console.error("Invalid user ID on disconnect:", userId);
+        return;
+      }
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          socketId: null,
+          isOnline: false,
+        },
+      });
+
+      console.log(`User ${userId} manually disconnected`);
+
+      // ✅ Notify all connected clients about updated online users
+      const onlineUsers = await prisma.user.findMany({
+        where: { isOnline: true },
+        select: { id: true, name: true },
+      });
+
+      console.log(
+        "Emitting online-users after manual disconnect:",
+        onlineUsers
+      );
+      io.emit("online-users", onlineUsers);
+    } catch (err) {
+      console.error("Error updating user status on disconnect:", err);
     }
   });
 
@@ -91,8 +126,6 @@ io.on("connection", (socket) => {
         },
       });
 
-      console.log("Saved to database:", savedMessage);
-
       // Broadcast to all connected clients
       io.emit("Global message", savedMessage);
     } catch (error) {
@@ -101,7 +134,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("Private message", async (msg) => {
-    console.log("Received private message:", msg);
     if (!msg || !msg.content || !msg.senderId || !msg.receiverId) {
       console.error("Invalid private message data:", msg);
       return;
@@ -131,9 +163,6 @@ io.on("connection", (socket) => {
         }),
       ]);
 
-      console.log("Sender socket:", sender?.socketId);
-      console.log("Receiver socket:", receiver?.socketId);
-
       // Emit to receiver if they're online
       if (receiver?.socketId) {
         io.to(receiver.socketId).emit("Private message", message);
@@ -147,32 +176,34 @@ io.on("connection", (socket) => {
       console.error("Error sending private message:", err);
     }
   });
-
   socket.on("disconnect", async () => {
-    // remove the socket id from the user and make isOnline false
-    prisma.user
-      .updateMany({
+    console.log("Socket disconnected:", socket.id);
+    try {
+      // remove the socket id from the user and make isOnline false
+      const result = await prisma.user.updateMany({
         where: { socketId: socket.id },
         data: { isOnline: false, socketId: null },
-      })
-      .then(() => {
-        console.log(`User disconnected: ${socket.id}`);
-      })
-      .catch((err) => {
-        console.error("Error updating user on disconnect:", err);
       });
 
-    // ✅ send
-    const onlineUsers = await prisma.user.findMany({
-      // is online is true and socketId is not equal to current socket id
-      where: { isOnline: true, socketId: { not: socket.id } },
-      select: { id: true, name: true }, // select only what you need
-    });
+      console.log(
+        `Updated ${result.count} user(s) to offline for socket ${socket.id}`
+      );
 
-    console.log(onlineUsers);
+      // ✅ Fetch and emit updated online users list
+      const onlineUsers = await prisma.user.findMany({
+        where: { isOnline: true },
+        select: { id: true, name: true },
+      });
 
-    // io.emit will send to all sockets (including the sender)
-    io.emit("online-users", onlineUsers);
+      console.log(
+        "Emitting online-users after socket disconnect:",
+        onlineUsers
+      );
+      // io.emit will send to all remaining connected sockets
+      io.emit("online-users", onlineUsers);
+    } catch (err) {
+      console.error("Error updating user on disconnect:", err);
+    }
   });
 });
 
@@ -195,7 +226,16 @@ app.use(
 
 const port = process.env.VITE_SERVER_PORT || 4000;
 server.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+  // logout all the users when the server starts
+  prisma.user
+    .updateMany({
+      where: { isOnline: true, socketId: { not: null } },
+      data: { isOnline: false, socketId: null },
+    })
+    .then(() => {})
+    .catch((err) => {
+      console.error("Error logging out users on server start:", err);
+    });
 });
 
 app.use("/user", userRouter);
@@ -209,5 +249,4 @@ app.use("/messages", messageRouter);
 //     console.error("Error connecting to MySQL:", err.stack);
 //     return;
 //   }
-//   console.log("Connected to MySQL as id " + connection.threadId);
 // });
