@@ -31,7 +31,8 @@ const io = new SocketIOServer(server, {
     // set two origins for CORS
     origin: [
       "http://localhost:5173", // Vite default
-      "http://192.168.1.9:5173", // Network IP (removed trailing slash)
+      "http://192.168.1.9:5173", // Network IP
+      "http://13.233.154.37:5173", // ec2
     ],
     methods: ["GET", "POST"],
   },
@@ -207,7 +208,12 @@ io.on("connection", (socket) => {
   });
 });
 
-const allowedOrigins = ["http://127.0.0.1:5173", "http://localhost:5173"];
+const allowedOrigins = [
+  "http://127.0.0.1:5173",
+  "http://localhost:5173",
+  "http://192.168.1.9:5173",
+  "http://13.233.154.37:5173",
+];
 
 // set origin for CORS
 app.use(
