@@ -9,6 +9,7 @@ interface userDataType {
   name: string;
   createdAt?: Date;
   avatar?: string;
+  token?: string;
 }
 
 interface loginResponseType {
@@ -52,7 +53,9 @@ const Login: React.FC = () => {
     );
 
     const user = response?.user;
-    if (user) {
+    const token = response?.user?.token;
+    if (user && token) {
+      localStorage.setItem("jwt", token);
       socket.emit("user connected", { userId: user?.id });
       // Login successful
       showToastMessage(`Welcome back, ${user?.name}! 🎉`, "success");

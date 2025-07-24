@@ -4,10 +4,13 @@ import type { GlobalMessages } from "../types/index";
 class MessageServices {
   async getGlobalMessages(): Promise<GlobalMessages[]> {
     try {
+      const token = localStorage.getItem("jwt");
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/messages/global-messages`,
         {
-          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
       if (response.status !== 200) {
@@ -22,12 +25,15 @@ class MessageServices {
 
   async getPrivateMessages(receiverId: number): Promise<GlobalMessages[]> {
     try {
+      const token = localStorage.getItem("jwt");
       const response = await axios.get(
         `${
           import.meta.env.VITE_API_URL
         }/messages/private-messages/${receiverId}`,
         {
-          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
       if (response.status !== 200) {
