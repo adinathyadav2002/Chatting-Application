@@ -77,10 +77,10 @@ router.post("/login", async (req, res) => {
       // essential for different domains or ports
       // (like frontend and backend running on different ports during development).
       sameSite: "none",
-      secure: "true",
+      secure: false,
     };
 
-    if (process.env.NODE_ENV === "production") cookieOptions.secure = true;
+    cookieOptions.secure = false;
 
     res.cookie("jwt", token, cookieOptions);
 
