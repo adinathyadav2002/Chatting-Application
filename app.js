@@ -33,8 +33,8 @@ const io = new SocketIOServer(server, {
       "http://localhost:5173", // Vite default
       "http://192.168.1.9:5173", // Network IP
       "http://13.233.154.37:5173",
-      "http://chat.adinathyadav.xyz" ,
-      "https://chat.adinathyadav.xyz"// ec2
+      "http://chat.adinathyadav.xyz",
+      "https://chat.adinathyadav.xyz", // ec2
     ],
     methods: ["GET", "POST"],
   },
@@ -215,6 +215,8 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://192.168.1.9:5173",
   "http://13.233.154.37:5173",
+  "http://chat.adinathyadav.xyz",
+  "https://chat.adinathyadav.xyz", // ec2
 ];
 
 // set origin for CORS
