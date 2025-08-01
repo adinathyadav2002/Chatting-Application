@@ -32,7 +32,9 @@ const io = new SocketIOServer(server, {
     origin: [
       "http://localhost:5173", // Vite default
       "http://192.168.1.9:5173", // Network IP
-      "http://13.233.154.37:5173", // ec2
+      "http://13.233.154.37:5173",
+      "http://chat.adinathyadav.xyz" ,
+      "https://chat.adinathyadav.xyz"// ec2
     ],
     methods: ["GET", "POST"],
   },
