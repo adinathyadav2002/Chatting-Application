@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import type { GlobalMessages, Message, User, PrivateMessage } from "../types";
+import type { GlobalMessages, Message, PrivateMessage } from "../types";
+import type { User } from "../types/user";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import Avatar from "./Avatar";
@@ -165,15 +166,15 @@ const ChatRoom: React.FC = () => {
             return prev.map((c) =>
               c.user.id.toString() === otherUserId
                 ? {
-                    ...c,
-                    lastMessage: newMessage.content,
-                    lastMessageTime: newMessage.timestamp,
-                    unreadCount:
-                      messageData.senderId.toString() !==
+                  ...c,
+                  lastMessage: newMessage.content,
+                  lastMessageTime: newMessage.timestamp,
+                  unreadCount:
+                    messageData.senderId.toString() !==
                       userdata.id?.toString()
-                        ? c.unreadCount + 1
-                        : c.unreadCount,
-                  }
+                      ? c.unreadCount + 1
+                      : c.unreadCount,
+                }
                 : c
             );
           } else {
@@ -323,9 +324,8 @@ const ChatRoom: React.FC = () => {
           </div>
           <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
             <span
-              className={`w-2 h-2 rounded-full ${
-                isConnected ? "bg-green-400" : "bg-red-400"
-              }`}
+              className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-400" : "bg-red-400"
+                }`}
             ></span>
             {isConnected ? "Connected" : "Disconnected"}
           </div>
@@ -337,11 +337,10 @@ const ChatRoom: React.FC = () => {
           {/* Global Chat Row */}
           <div
             onClick={() => handleChatSelect("global")}
-            className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
-              activeChat === "global"
-                ? "bg-blue-50 border-l-4 border-l-blue-500"
-                : ""
-            }`}
+            className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${activeChat === "global"
+              ? "bg-blue-50 border-l-4 border-l-blue-500"
+              : ""
+              }`}
           >
             <div className="flex items-center gap-3">
               <Avatar type="global" size="lg" />
@@ -358,12 +357,11 @@ const ChatRoom: React.FC = () => {
             <div
               key={conversation.user.id}
               onClick={() => handleChatSelect(conversation.user)}
-              className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
-                activeChat !== "global" &&
+              className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${activeChat !== "global" &&
                 activeChat.id === conversation.user.id
-                  ? "bg-blue-50 border-l-4 border-l-blue-500"
-                  : ""
-              }`}
+                ? "bg-blue-50 border-l-4 border-l-blue-500"
+                : ""
+                }`}
             >
               <div className="flex items-center gap-3">
                 <Avatar
@@ -403,11 +401,10 @@ const ChatRoom: React.FC = () => {
               <div
                 key={user.id}
                 onClick={() => handleChatSelect(user)}
-                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
-                  activeChat !== "global" && activeChat.id === user.id
-                    ? "bg-blue-50 border-l-4 border-l-blue-500"
-                    : ""
-                }`}
+                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${activeChat !== "global" && activeChat.id === user.id
+                  ? "bg-blue-50 border-l-4 border-l-blue-500"
+                  : ""
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <Avatar

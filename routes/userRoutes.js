@@ -1,11 +1,11 @@
 import express from "express";
 import bcrypt from "bcryptjs";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../db.js";
+
 import jwt from "jsonwebtoken";
 import { protect } from "../controllers/authController.js";
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 router.post("/register", async (req, res) => {
   const { name, email, password, avatar } = req.body;
@@ -55,12 +55,12 @@ router.post("/login", async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      return res.status(400).json({ error: "Invalid email or password." });
+      return res.status(401).json({ error: "Invalid email or password." });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(400).json({ error: "Invalid email or password." });
+      return res.status(401).json({ error: "Invalid email or password." });
     }
     const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN || "7d", // Default to 7 days

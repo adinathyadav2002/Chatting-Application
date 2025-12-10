@@ -30,20 +30,27 @@ class UserServices {
     // call axios post request to validate user
 
     //  res.cookie("jwt", token, cookieOptions); store cookie in browser
-    const response = await axios.post(
-      `${import.meta.env.VITE_API_URL}/user/login`,
-      {
-        email,
-        password,
-      }
-    );
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/user/login`,
+        {
+          email,
+          password,
+        }
+      );
 
-    if (response.status === 200) {
-      const user = response.data.user;
-      const token = response.data.token;
-      return { success: true, user, token };
-    } else {
-      return { success: false, message: response.data.error };
+      if (response.status === 200) {
+        const user = response.data.user;
+        const token = response.data.token;
+        return { success: true, user, token };
+      }
+
+      // if you are using axios then this will not be excuted
+      // console.log("hii");
+
+    } catch (err) {
+      console.log(err);
+      throw err;
     }
   }
 

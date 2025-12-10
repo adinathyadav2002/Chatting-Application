@@ -1,17 +1,18 @@
-/*
-  Warnings:
+-- CreateTable
+CREATE TABLE `User` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(191) NOT NULL,
+    `email` VARCHAR(191) NOT NULL,
+    `socketId` VARCHAR(191) NULL,
+    `password` VARCHAR(191) NOT NULL,
+    `isVerified` BOOLEAN NOT NULL DEFAULT false,
+    `isOnline` BOOLEAN NOT NULL DEFAULT false,
+    `avatar` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-  - You are about to drop the `message` table. If the table is not empty, all the data it contains will be lost.
-
-*/
--- DropForeignKey
-ALTER TABLE `message` DROP FOREIGN KEY `Message_receiverId_fkey`;
-
--- DropForeignKey
-ALTER TABLE `message` DROP FOREIGN KEY `Message_senderId_fkey`;
-
--- DropTable
-DROP TABLE `message`;
+    UNIQUE INDEX `User_email_key`(`email`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `Messages` (

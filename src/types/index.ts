@@ -1,10 +1,4 @@
-export interface User {
-  id: number;
-  name: string;
-  password?: string; // Optional for dummy data, not used in production
-  isOnline: boolean;
-  avatar?: string;
-}
+import type { User } from "./user";
 
 export interface Message {
   id: string;

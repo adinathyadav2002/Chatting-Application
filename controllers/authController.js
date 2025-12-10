@@ -1,8 +1,7 @@
 import jwt from "jsonwebtoken";
 import { promisify } from "util";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../db.js";
 
-const prisma = new PrismaClient();
 import catchAsync from "../utilities/catchAsync.js";
 import AppError from "../utilities/appError.js";
 

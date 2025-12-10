@@ -1,9 +1,8 @@
 import express from "express";
-import { PrismaClient } from "@prisma/client";
 import { protect } from "../controllers/authController.js";
+import { prisma } from "../db.js";
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 router.get("/global-messages", protect, async (req, res) => {
   try {

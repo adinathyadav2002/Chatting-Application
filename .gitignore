@@ -40,3 +40,11 @@ dist-ssr
 .env.local
 .env.*.local
 
+
+/generated/prisma
+
+/src/generated/prisma
+
+/generated/prisma
+
+/src/generated/prisma

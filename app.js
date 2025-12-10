@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { PrismaClient } from "@prisma/client";
+
 import express from "express";
 import { Server as SocketIOServer } from "socket.io";
 import { fileURLToPath } from "url";
@@ -9,12 +9,12 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import morgan from "morgan";
 
+import { prisma } from "./db.js";
+
 import userRouter from "./routes/userRoutes.js";
 import messageRouter from "./routes/messageRoutes.js";
 
 dotenv.config();
-
-const prisma = new PrismaClient();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -74,6 +74,7 @@ io.on("connection", (socket) => {
       console.error("Error updating user status:", err);
     }
   });
+
   socket.on("user disconnected", async (userData) => {
     try {
       let userId = parseInt(userData.userId || userData);

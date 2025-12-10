@@ -1,9 +1,14 @@
-import mysql from "mysql2";
+import "dotenv/config";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { PrismaClient } from "./generated/prisma/index.js";
 
-// create a connection
-export const connection = mysql.createConnection({
+const adapter = new PrismaMariaDb({
   host: "localhost",
   user: "root",
-  password: "Adinathsy@123",
+  password: "12345678",
   database: "chat_app",
+  connectionLimit: 5,
 });
+const prisma = new PrismaClient({ adapter });
+
+export { prisma };

@@ -39,33 +39,43 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("set loading to true");
+
     setIsLoading(true);
 
-    if (!socket || !isConnected) {
-      showToastMessage("Socket connection is not established.", "error");
+    try {
+      if (!socket || !isConnected) {
+        showToastMessage("Socket connection is not established.", "error");
+        setIsLoading(false);
+        return;
+      }
+
+      const response: loginResponseType = await userServices.loginUser(
+        email.trim(),
+        password.trim()
+      );
+
+      console.log(response);
+
+      const user = response?.user;
+      const token = response?.user?.token;
+      if (user && token) {
+        localStorage.setItem("jwt", token);
+        socket.emit("user connected", { userId: user?.id });
+        // Login successful
+        showToastMessage(`Welcome back, ${user?.name}! 🎉`, "success");
+        // Update user context
+        navigate("/");
+      }
+
+    } catch (err) {
+      console.log(`gott erroor ${err}`);
+    } finally {
+      console.log("set loading to falsse");
       setIsLoading(false);
-      return;
-    }
 
-    const response: loginResponseType = await userServices.loginUser(
-      email.trim(),
-      password.trim()
-    );
-
-    const user = response?.user;
-    const token = response?.user?.token;
-    if (user && token) {
-      localStorage.setItem("jwt", token);
-      socket.emit("user connected", { userId: user?.id });
-      // Login successful
-      showToastMessage(`Welcome back, ${user?.name}! 🎉`, "success");
-      // Update user context
-      navigate("/");
-    } else {
-      // Login failed
       showToastMessage("Invalid email or password. Please try again.", "error");
     }
-    setIsLoading(false);
   };
 
   return (
@@ -73,11 +83,10 @@ const Login: React.FC = () => {
       {/* Toast Notification */}
       {showToast && (
         <div
-          className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transition-all duration-300 transform ${
-            toastType === "success"
-              ? "bg-green-500 text-white"
-              : "bg-red-500 text-white"
-          }`}
+          className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transition-all duration-300 transform ${toastType === "success"
+            ? "bg-green-500 text-white"
+            : "bg-red-500 text-white"
+            }`}
         >
           <div className="flex items-center gap-3">
             <span className="text-lg">

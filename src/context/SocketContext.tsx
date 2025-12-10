@@ -12,7 +12,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // Connect to the server
-    const newSocket = io("http://13.233.154.37:4000");
+    const newSocket = io("http://localhost:4000");
 
     newSocket.on("connect", () => {
       setIsConnected(true);
