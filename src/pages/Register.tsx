@@ -78,20 +78,23 @@ const Register: React.FC = () => {
       );
 
       if (result?.success) {
+        console.log(result);
         showToastMessage(
-          `Welcome to the chat, ${result.user.name}! 🎉`,
+          `Welcome to the chat, ${result.user.email}! 🎉`,
           "success"
         );
         // Reset form after successful registration
         setFormData({ name: "", email: "", password: "", avatar: "" });
         setConfirmPassword("");
-        navigate("/login");
+        setTimeout(() => {
+          navigate("/login");
+        }, 2000)
       } else {
         showToastMessage(result.message, "error");
       }
-    } catch (error) {
-      console.error("Registration error:", error);
-      showToastMessage("Registration failed. Please try again.", "error");
+    } catch (error: any) {
+      console.error("Registration error:", error.response.data.error);
+      showToastMessage(error.response.data.error || "Registration failed. Please try again.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -107,11 +110,10 @@ const Register: React.FC = () => {
       {/* Toast Notification */}
       {showToast && (
         <div
-          className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transition-all duration-300 transform ${
-            toastType === "success"
-              ? "bg-green-500 text-white"
-              : "bg-red-500 text-white"
-          }`}
+          className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transition-all duration-300 transform ${toastType === "success"
+            ? "bg-green-500 text-white"
+            : "bg-red-500 text-white"
+            }`}
         >
           <div className="flex items-center gap-3">
             <span className="text-lg">
