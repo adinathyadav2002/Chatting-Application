@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import { SocketContext } from "./SocketContextType";
+import { type SocketContextType } from "../types/context";
+import { createContext } from "react";
 
 interface SocketProviderProps {
   children: React.ReactNode;
 }
+
+export const SocketContext = createContext<SocketContextType>({
+  socket: null,
+  isConnected: false,
+});
+
 
 export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const [socket, setSocket] = useState<Socket | null>(null);

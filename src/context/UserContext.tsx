@@ -1,26 +1,9 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 import userServices from "../services/userServices";
 import { useSocket } from "../hooks/useSocket";
+import type { UserContextType, userDataType } from "../types/context";
 
-interface userDataType {
-  id: number | null;
-  name?: string;
-  email?: string;
-  isOnline: boolean;
-  avatar?: string;
-  socketId?: string | null;
-}
-
-interface UserContextType {
-  userdata: userDataType;
-  handleUpdateUser: (user: userDataType) => void;
-  handleUserData: (user: userDataType) => void;
-  isLoggedIn: boolean;
-  setIsLoggedIn: (isLoggedIn: boolean) => void;
-  setNavigateFn: (navigateFn: ((path: string) => void) | null) => void;
-}
-
-const UserContext = createContext<UserContextType | undefined>(undefined);
+export const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserContextProvider({
   children,
@@ -60,7 +43,6 @@ export function UserContextProvider({
           socketId: socket?.id || null,
         });
 
-        console.log("Emitting user connected event with userId:", user.id);
         socket?.emit("user connected", { userId: user?.id });
       } else {
         setIsLoggedIn(false);
@@ -68,6 +50,8 @@ export function UserContextProvider({
       }
     };
     fetchUserData();
+
+
   }, [socket, navigateFn]); // Added socket dependency
 
   return (
@@ -86,10 +70,3 @@ export function UserContextProvider({
   );
 }
 
-export function useUserContext(): UserContextType {
-  const context = useContext(UserContext);
-  if (!context) {
-    throw new Error("useUserContext must be used within a UserContextProvider");
-  }
-  return context;
-}

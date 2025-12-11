@@ -5,10 +5,10 @@ import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import Avatar from "./Avatar";
 import { useSocket } from "../hooks/useSocket";
-import { useUserContext } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
 import userServices from "../services/userServices";
 import { messageServices } from "../services/messageServices";
+import { useUserContext } from "../hooks/useUser";
 
 const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -284,7 +284,7 @@ const ChatRoom: React.FC = () => {
               "Unknown",
             content: msg.content,
             timestamp: msg.timestamp,
-            type: "text",
+
           })
         );
     }

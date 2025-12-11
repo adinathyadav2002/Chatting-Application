@@ -1,6 +1,6 @@
 import React from "react";
 import Avatar from "./Avatar";
-import type { User } from "../types";
+import type { User } from "../types/user";
 
 interface Conversation {
   user: User;
@@ -39,9 +39,8 @@ const PrivateChatSidebar: React.FC<PrivateChatSidebarProps> = ({
 
   return (
     <div
-      className={`fixed right-0 top-0 h-full w-80 bg-white border-l border-gray-200 shadow-2xl transform transition-transform duration-300 z-40 ${
-        isVisible ? "translate-x-0" : "translate-x-full"
-      }`}
+      className={`fixed right-0 top-0 h-full w-80 bg-white border-l border-gray-200 shadow-2xl transform transition-transform duration-300 z-40 ${isVisible ? "translate-x-0" : "translate-x-full"
+        }`}
     >
       {/* Header */}
       <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-500 to-blue-600 text-white">

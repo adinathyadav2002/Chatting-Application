@@ -15,8 +15,8 @@ function App() {
           <BrowserRouter>
             <NavigationBridge />
             <Routes>
-              <Route path="/login" element={<Login />} />
               <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
             </Routes>
           </BrowserRouter>

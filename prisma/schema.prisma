@@ -40,4 +40,6 @@ model Messages {
   content    String
   isGlobal   Boolean  @default(false)
   createdAt  DateTime @default(now())
+
+  isRead Boolean @default(false)
 }

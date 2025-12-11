@@ -1,6 +1,6 @@
 import React from "react";
 import Avatar from "./Avatar";
-import type { User } from "../types";
+import type { User } from "../types/user";
 
 interface Conversation {
   user: User;

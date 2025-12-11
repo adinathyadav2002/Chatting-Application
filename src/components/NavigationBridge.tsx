@@ -1,8 +1,8 @@
 // NavigationBridge.js
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUserContext } from "../context/UserContext";
 import { useLocation } from "react-router-dom";
+import { useUserContext } from "../hooks/useUser";
 
 const NavigationBridge = () => {
   const navigate = useNavigate();

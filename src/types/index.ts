@@ -6,7 +6,6 @@ export interface Message {
   username: string;
   content: string;
   timestamp: Date;
-  type: "text" | "system" | "private";
 }
 
 export interface PrivateMessage {

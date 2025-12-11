@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { User } from "../types";
+import type { User } from "../types/user";
 import PrivateMessageModal from "./PrivateMessageModal";
 import PrivateChatSidebar from "./PrivateChatSidebar";
 import UserSelector from "./UserSelector";

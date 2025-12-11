@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import Avatar from "./Avatar";
-import type { User, PrivateMessage } from "../types";
+import type { PrivateMessage } from "../types";
+import type { User } from "../types/user";
 import MessageInput from "./MessageInput";
 
 interface PrivateMessageModalProps {
@@ -98,24 +99,21 @@ const PrivateMessageModal: React.FC<PrivateMessageModalProps> = ({
               return (
                 <div
                   key={message.id}
-                  className={`flex ${
-                    isOwnMessage ? "justify-end" : "justify-start"
-                  }`}
+                  className={`flex ${isOwnMessage ? "justify-end" : "justify-start"
+                    }`}
                 >
                   <div
-                    className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm transition-all duration-200 ${
-                      isOwnMessage
+                    className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm transition-all duration-200 ${isOwnMessage
                         ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-md"
                         : "bg-white text-gray-800 rounded-bl-md border border-gray-100"
-                    }`}
+                      }`}
                   >
                     <div className="text-sm leading-relaxed">
                       {message.content}
                     </div>
                     <div
-                      className={`text-xs mt-2 ${
-                        isOwnMessage ? "text-blue-100" : "text-gray-400"
-                      }`}
+                      className={`text-xs mt-2 ${isOwnMessage ? "text-blue-100" : "text-gray-400"
+                        }`}
                     >
                       {formatTime(message.timestamp)}
                     </div>
