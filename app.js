@@ -59,16 +59,23 @@ io.on("connection", (socket) => {
           where: { email: receiverEmailv },
         }),
       ]);
-      io.to(receiver.socketId).emit(
-        "want to video call",
-        socket.id,
-        sender.email
-      );
+
+      const message = await prisma.messages.create({
+        data: {
+          content: msg.content,
+          senderId: parseInt(msg.senderId),
+          receiverId: parseInt(msg.receiverId),
+          isGlobal: false,
+        },
+        include: {
+          sender: true,
+          receiver: true,
+        },
+      });
+      io.to(receiver.socketId).emit("want to video call", message);
     } catch (err) {
       console.log(`Error calling ${receiverEmail}`);
     }
-
-    // store data  in messages about  room
   });
 
   socket.on("user connected", async (userData) => {

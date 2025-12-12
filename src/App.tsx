@@ -1,4 +1,4 @@
-import Home from "./pages/Home";
+import Home from "./pages/Chats";
 import { SocketProvider } from "./context/SocketContext";
 import "./App.css";
 import { BrowserRouter, Route, Routes } from "react-router-dom";

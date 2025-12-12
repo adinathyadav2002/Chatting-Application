@@ -7,6 +7,7 @@ interface AvatarProps {
   size?: "sm" | "md" | "lg";
   isOnline?: boolean;
   className?: string;
+  emoji?: string;
 }
 
 const Avatar: React.FC<AvatarProps> = ({
@@ -15,6 +16,7 @@ const Avatar: React.FC<AvatarProps> = ({
   size = "md",
   isOnline,
   className = "",
+  emoji = ""
 }) => {
   const sizeClasses = {
     sm: "w-8 h-8 text-sm",
@@ -35,15 +37,13 @@ const Avatar: React.FC<AvatarProps> = ({
       <div
         className={`${sizeClasses[size]} ${bgColor} rounded-full flex items-center justify-center text-white font-semibold ${className}`}
       >
-        {getDefaultAvatar(type)}
+        {emoji}
       </div>
       {isOnline !== undefined && (
         <span
-          className={`absolute -bottom-1 -right-1 ${
-            onlineIndicatorSizes[size]
-          } rounded-full border-2 border-white ${
-            isOnline ? "bg-green-400 animate-pulse" : "bg-gray-400"
-          }`}
+          className={`absolute -bottom-1 -right-1 ${onlineIndicatorSizes[size]
+            } rounded-full border-2 border-white ${isOnline ? "bg-green-400 animate-pulse" : "bg-gray-400"
+            }`}
         />
       )}
     </div>

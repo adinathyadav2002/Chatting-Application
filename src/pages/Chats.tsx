@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from "react";
 import type { GlobalMessages, Message, PrivateMessage } from "../types";
 import type { User } from "../types/user";
-import MessageList from "./MessageList";
-import MessageInput from "./MessageInput";
-import Avatar from "./Avatar";
+import MessageList from "../components/MessageList";
+import MessageInput from "../components/MessageInput";
+import Avatar from "../components/Avatar";
 import { useSocket } from "../hooks/useSocket";
 import { useNavigate } from "react-router-dom";
 import userServices from "../services/userServices";
 import { messageServices } from "../services/messageServices";
 import { useUserContext } from "../hooks/useUser";
 
-const ChatRoom: React.FC = () => {
+const Home: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [privateMessages, setPrivateMessages] = useState<PrivateMessage[]>([]);
   const [conversations, setConversations] = useState<
@@ -308,100 +308,58 @@ const ChatRoom: React.FC = () => {
   const headerInfo = getChatHeader();
 
   return (
-    <div className="flex h-screen w-full bg-gray-100">
-      {/* Left Sidebar - Conversations */}
-      <div className="w-80 bg-white border-r border-gray-300 flex flex-col">
-        {/* Sidebar Header */}
-        <div className="p-4 bg-gray-50 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-800">Chats</h2>
-            <button
-              onClick={handleLogout}
-              className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm transition-colors"
-            >
-              Logout
-            </button>
-          </div>
-          <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
-            <span
-              className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-400" : "bg-red-400"
-                }`}
-            ></span>
-            {isConnected ? "Connected" : "Disconnected"}
-          </div>
-        </div>
-
-        {/* Conversations List */}
-        <div className="flex-1 overflow-y-auto">
-          {" "}
-          {/* Global Chat Row */}
-          <div
-            onClick={() => handleChatSelect("global")}
-            className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${activeChat === "global"
-              ? "bg-blue-50 border-l-4 border-l-blue-500"
-              : ""
-              }`}
-          >
-            <div className="flex items-center gap-3">
-              <Avatar type="global" size="lg" />
-              <div className="flex-1">
-                <h3 className="font-medium text-gray-900">Global Chat</h3>
-                <p className="text-sm text-gray-600">
-                  {users.filter((u) => u.isOnline).length} users online
-                </p>
-              </div>
+    <div className="min-h-screen bg-gray-100">
+      <div className="flex h-screen w-full bg-gray-100">
+        {/* Left Sidebar - Conversations */}
+        <div className="w-80 bg-white border-r border-gray-300 flex flex-col">
+          {/* Sidebar Header */}
+          <div className="p-4 bg-gray-50 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-800">Chats</h2>
+              <button
+                onClick={handleLogout}
+                className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm transition-colors"
+              >
+                Logout
+              </button>
             </div>
-          </div>{" "}
-          {/* Private Conversations */}
-          {conversations.map((conversation) => (
+            <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
+              <span
+                className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-400" : "bg-red-400"
+                  }`}
+              ></span>
+              {isConnected ? "Connected" : "Disconnected"}
+            </div>
+          </div>
+
+          {/* Conversations List */}
+          <div className="flex-1 overflow-y-auto">
+            {" "}
+            {/* Global Chat Row */}
             <div
-              key={conversation.user.id}
-              onClick={() => handleChatSelect(conversation.user)}
-              className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${activeChat !== "global" &&
-                activeChat.id === conversation.user.id
+              onClick={() => handleChatSelect("global")}
+              className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${activeChat === "global"
                 ? "bg-blue-50 border-l-4 border-l-blue-500"
                 : ""
                 }`}
             >
               <div className="flex items-center gap-3">
-                <Avatar
-                  type="user"
-                  name={conversation.user.name}
-                  size="lg"
-                  isOnline={conversation.user.isOnline}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-gray-900 truncate">
-                      {conversation.user.name}
-                    </h3>
-                    {conversation.unreadCount > 0 && (
-                      <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                        {conversation.unreadCount}
-                      </span>
-                    )}
-                  </div>
-                  {conversation.lastMessage && (
-                    <p className="text-sm text-gray-600 truncate">
-                      {conversation.lastMessage}
-                    </p>
-                  )}
+                <Avatar type="global" size="lg" emoji="G" />
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900">Global Chat</h3>
+                  <p className="text-sm text-gray-600">
+                    {users.filter((u) => u.isOnline).length} users online
+                  </p>
                 </div>
               </div>
-            </div>
-          ))}{" "}
-          {/* Other Users (not in conversations yet) */}
-          {users
-            .filter(
-              (user) =>
-                user.id !== userdata.id &&
-                !conversations.some((c) => c.user.id === user.id)
-            )
-            .map((user) => (
+            </div>{" "}
+            {/* Private Conversations */}
+            {conversations.map((conversation) => (
               <div
-                key={user.id}
-                onClick={() => handleChatSelect(user)}
-                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${activeChat !== "global" && activeChat.id === user.id
+                key={conversation.user.id}
+                onClick={() => handleChatSelect(conversation.user)}
+                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${activeChat !== "global" &&
+                  activeChat.id === conversation.user.id
                   ? "bg-blue-50 border-l-4 border-l-blue-500"
                   : ""
                   }`}
@@ -409,54 +367,102 @@ const ChatRoom: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <Avatar
                     type="user"
-                    name={user.name}
+                    name={conversation.user.name}
                     size="lg"
-                    isOnline={user.isOnline}
+                    isOnline={conversation.user.isOnline}
+                    emoji={conversation.user.avatar}
                   />
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">{user.name}</h3>
-                    <p className="text-sm text-gray-600">
-                      {user.isOnline ? "Online" : "Offline"}
-                    </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-gray-900 truncate">
+                        {conversation.user.name}
+                      </h3>
+                      {conversation.unreadCount > 0 && (
+                        <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                          {conversation.unreadCount}
+                        </span>
+                      )}
+                    </div>
+                    {conversation.lastMessage && (
+                      <p className="text-sm text-gray-600 truncate">
+                        {conversation.lastMessage}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
-            ))}
-        </div>
-      </div>
+            ))}{" "}
 
-      {/* Right Main Chat Area */}
-      <div className="flex-1 flex flex-col bg-white">
-        {" "}
-        {/* Chat Header */}
-        <div className="p-4 border-b border-gray-200 bg-gray-50">
-          <div className="flex items-center gap-3">
-            {activeChat !== "global" ? (
-              <Avatar type="user" name={activeChat.name} size="md" />
-            ) : (
-              <Avatar type="global" size="md" />
-            )}
-            <div>
-              <h3 className="font-semibold text-gray-900">
-                {headerInfo.title}
-              </h3>
-              <p className="text-sm text-gray-600">{headerInfo.subtitle}</p>
-            </div>
+            {/* Other Users (not in conversations yet) */}
+            {users
+              .filter(
+                (user) =>
+                  user.id !== userdata.id &&
+                  !conversations.some((c) => c.user.id === user.id)
+              )
+              .map((user) => (
+                <div
+                  key={user.id}
+                  onClick={() => handleChatSelect(user)}
+                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${activeChat !== "global" && activeChat.id === user.id
+                    ? "bg-blue-50 border-l-4 border-l-blue-500"
+                    : ""
+                    }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar
+                      type="user"
+                      name={user.name}
+                      size="lg"
+                      isOnline={user.isOnline}
+                      emoji={user.avatar}
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900">{user.name}</h3>
+                      <p className="text-sm text-gray-600">
+                        {user.isOnline ? "Online" : "Offline"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
           </div>
         </div>
-        {/* Messages */}
-        <MessageList
-          messages={getCurrentMessages()}
-          currentUserId={userdata.id || 0}
-        />
-        {/* Message Input */}
-        <MessageInput
-          onSendMessage={handleSendMessage}
-          disabled={!isConnected}
-        />
+
+        {/* Right Main Chat Area */}
+        <div className="flex-1 flex flex-col bg-white">
+          {" "}
+          {/* Chat Header */}
+          <div className="p-4 border-b border-gray-200 bg-gray-50">
+            <div className="flex items-center gap-3">
+              {activeChat !== "global" ? (
+                <Avatar type="user" name={activeChat.name} size="md" emoji={activeChat.avatar} />
+              ) : (
+                <Avatar type="global" size="md" emoji="G" />
+              )}
+              <div>
+                <h3 className="font-semibold text-gray-900">
+                  {headerInfo.title}
+                </h3>
+                <p className="text-sm text-gray-600">{headerInfo.subtitle}</p>
+              </div>
+            </div>
+          </div>
+          {/* Messages */}
+          <MessageList
+            messages={getCurrentMessages()}
+            currentUserId={userdata.id || 0}
+          />
+          {/* Message Input */}
+          <MessageInput
+            onSendMessage={handleSendMessage}
+            disabled={!isConnected}
+          />
+        </div>
       </div>
     </div>
   );
+
 };
 
-export default ChatRoom;
+export default Home;
