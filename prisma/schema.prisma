@@ -13,6 +13,15 @@ datasource db {
   provider = "mysql"
 }
 
+enum ContentType {
+  text
+  video
+  audio
+  image
+  document
+  videoCall
+}
+
 model User {
   id    Int    @id @default(autoincrement())
   name  String
@@ -30,16 +39,18 @@ model User {
 
 
 model Messages {
-  id         Int      @id @default(autoincrement())
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
-  senderId   Int
-
-  receiver   User?    @relation("ReceivedMessages", fields: [receiverId], references: [id])
-  receiverId Int?
-
-  content    String
-  isGlobal   Boolean  @default(false)
-  createdAt  DateTime @default(now())
-
-  isRead Boolean @default(false)
+  id            Int      @id @default(autoincrement())
+  sender        User     @relation("SentMessages", fields: [senderId], references: [id])
+  senderId      Int
+   
+  receiver      User?    @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  receiverId    Int?
+   
+  content       String
+  isGlobal      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+   
+  isRead        Boolean @default(false)
+  contentType   ContentType @default(text)
+  roomId        Int?      @unique
 }

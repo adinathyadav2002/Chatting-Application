@@ -1,6 +1,6 @@
 import React from "react";
 import Avatar from "./Avatar";
-import type { User } from "../types";
+import type { User } from "../types/user";
 
 interface UserListProps {
   users: User[];
@@ -17,11 +17,10 @@ const UserList: React.FC<UserListProps> = ({ currentUserId, users }) => {
         {users?.map((user) => (
           <div
             key={user?.id}
-            className={`flex items-center gap-3 p-4 rounded-xl bg-white border transition-all duration-300 hover:bg-blue-50 hover:translate-x-1 hover:shadow-md cursor-pointer ${
-              user.id === currentUserId
-                ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 shadow-md"
-                : "border-gray-200 hover:border-blue-200"
-            } ${!user.isOnline ? "opacity-60 grayscale" : ""}`}
+            className={`flex items-center gap-3 p-4 rounded-xl bg-white border transition-all duration-300 hover:bg-blue-50 hover:translate-x-1 hover:shadow-md cursor-pointer ${user.id === currentUserId
+              ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 shadow-md"
+              : "border-gray-200 hover:border-blue-200"
+              } ${!user.isOnline ? "opacity-60 grayscale" : ""}`}
           >
             {" "}
             <Avatar

@@ -52,7 +52,7 @@ export function UserContextProvider({
     fetchUserData();
 
 
-  }, [socket, navigateFn]); // Added socket dependency
+  }, [socket, navigateFn]);
 
   return (
     <UserContext.Provider

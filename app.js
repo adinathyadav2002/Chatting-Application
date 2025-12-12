@@ -43,6 +43,34 @@ const io = new SocketIOServer(server, {
 io.on("connection", (socket) => {
   console.log("New socket connected:", socket.id);
 
+  socket.on("initiate video call", async (receiverEmail) => {
+    if (!receiverEmail) {
+      console.log("Receiver email not  found");
+      return;
+    }
+
+    // find the socket id of receiver with email
+    try {
+      const [sender, receiver] = await Promise.all([
+        prisma.user.findUnique({
+          where: { socketId: socket.id },
+        }),
+        prisma.user.findUnique({
+          where: { email: receiverEmailv },
+        }),
+      ]);
+      io.to(receiver.socketId).emit(
+        "want to video call",
+        socket.id,
+        sender.email
+      );
+    } catch (err) {
+      console.log(`Error calling ${receiverEmail}`);
+    }
+
+    // store data  in messages about  room
+  });
+
   socket.on("user connected", async (userData) => {
     try {
       let userId = parseInt(userData.userId);
@@ -180,6 +208,7 @@ io.on("connection", (socket) => {
       console.error("Error sending private message:", err);
     }
   });
+
   socket.on("disconnect", async () => {
     console.log("Socket disconnected:", socket.id);
     try {
