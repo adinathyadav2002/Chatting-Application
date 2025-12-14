@@ -1,8 +1,16 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import Avatar from "./Avatar";
-import type { User } from "../types";
+import type { User } from "../types/user";
 
-interface UserSelectorProps {
+
+const UserSelector = ({
+  isOpen,
+  onClose,
+  users,
+  currentUserId,
+  onUserSelect,
+  existingConversations,
+}: {
   isOpen: boolean;
   onClose: () => void;
   users: User[];
@@ -10,15 +18,7 @@ interface UserSelectorProps {
   onUserSelect: (user: User) => void;
   existingConversations: User[];
 }
-
-const UserSelector: React.FC<UserSelectorProps> = ({
-  isOpen,
-  onClose,
-  users,
-  currentUserId,
-  onUserSelect,
-  existingConversations,
-}) => {
+) => {
   const [searchTerm, setSearchTerm] = useState("");
 
   // Filter out current user and users with existing conversations

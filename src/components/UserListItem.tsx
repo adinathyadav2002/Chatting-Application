@@ -1,5 +1,5 @@
 import React from "react";
-import type { User } from "../types";
+import type { User } from "../types/user";
 import Avatar from "./Avatar";
 
 interface UserListItemProps {
@@ -20,11 +20,10 @@ const UserListItem: React.FC<UserListItemProps> = ({
   return (
     <div
       onClick={() => !isCurrentUser && onUserClick(user)}
-      className={`flex items-center gap-3 p-4 rounded-xl border transition-all duration-300 relative ${
-        isCurrentUser
+      className={`flex items-center gap-3 p-4 rounded-xl border transition-all duration-300 relative ${isCurrentUser
           ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 shadow-md cursor-default"
           : "bg-white border-gray-200 hover:border-blue-200 hover:bg-blue-50 hover:translate-x-1 hover:shadow-md cursor-pointer"
-      } ${!user.isOnline ? "opacity-60 grayscale" : ""}`}
+        } ${!user.isOnline ? "opacity-60 grayscale" : ""}`}
     >
       {" "}
       {/* Avatar */}

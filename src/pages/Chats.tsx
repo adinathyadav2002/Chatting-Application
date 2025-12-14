@@ -9,6 +9,8 @@ import { useNavigate } from "react-router-dom";
 import userServices from "../services/userServices";
 import { messageServices } from "../services/messageServices";
 import { useUserContext } from "../hooks/useUser";
+import { FaVideo } from "react-icons/fa";
+import VideoCallingModal from "../components/VideoCallingModal";
 
 const Home: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -21,6 +23,7 @@ const Home: React.FC = () => {
       unreadCount: number;
     }>
   >([]);
+  const [videoModal, setVideoModal] = useState<"receiving" | "off" | "calling" | "live">("off");
 
   // WhatsApp-like state management
   const [activeChat, setActiveChat] = useState<"global" | User>("global");
@@ -195,10 +198,17 @@ const Home: React.FC = () => {
       }
     });
 
+    socket.on("receive video call", () => {
+      setVideoModal(() => "receiving");
+
+
+    });
+
     // Cleanup listeners on unmount
     return () => {
       socket.off("Global message");
       socket.off("Private message");
+      socket.off("receive video call");
     };
   }, [socket, isLoggedIn, navigate, userdata.id, users]);
 
@@ -261,6 +271,15 @@ const Home: React.FC = () => {
     }
   };
 
+  const handleVideoCall = async (receiverId: number | undefined) => {
+    // open  modal of calling
+    setVideoModal(() => "calling");
+
+    // send message to receiver through socket
+    socket?.emit("initiate video call", receiverId, userdata.id);
+
+  }
+
   // Get messages for the current active chat
   const getCurrentMessages = () => {
     if (activeChat === "global") {
@@ -292,6 +311,7 @@ const Home: React.FC = () => {
 
   // Get chat header info
   const getChatHeader = () => {
+    console.log(activeChat);
     if (activeChat === "global") {
       return {
         title: "Global Chat",
@@ -301,14 +321,22 @@ const Home: React.FC = () => {
       return {
         title: activeChat.name,
         subtitle: activeChat.isOnline ? "Online" : "Offline",
+        id: activeChat.id
       };
     }
   };
+
+  function handleChangeModal(modal: "receiving" | "off" | "calling" | "live") {
+    setVideoModal(() => modal);
+  }
 
   const headerInfo = getChatHeader();
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {/* // Video  Calling Modal */}
+      {videoModal != "off" && <VideoCallingModal st={videoModal} onChangeModal={handleChangeModal} />}
+
       <div className="flex h-screen w-full bg-gray-100">
         {/* Left Sidebar - Conversations */}
         <div className="w-80 bg-white border-r border-gray-300 flex flex-col">
@@ -434,17 +462,25 @@ const Home: React.FC = () => {
           {" "}
           {/* Chat Header */}
           <div className="p-4 border-b border-gray-200 bg-gray-50">
-            <div className="flex items-center gap-3">
-              {activeChat !== "global" ? (
-                <Avatar type="user" name={activeChat.name} size="md" emoji={activeChat.avatar} />
-              ) : (
-                <Avatar type="global" size="md" emoji="G" />
-              )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {activeChat !== "global" ? (
+                  <Avatar type="user" name={activeChat.name} size="md" emoji={activeChat.avatar} />
+                ) : (
+                  <Avatar type="global" size="md" emoji="G" />
+                )}
+                <div>
+                  <h3 className="font-semibold text-gray-900">
+                    {headerInfo.title}
+                  </h3>
+                  <p className="text-sm text-gray-600">{headerInfo.subtitle}</p>
+                </div>
+              </div>
               <div>
-                <h3 className="font-semibold text-gray-900">
-                  {headerInfo.title}
-                </h3>
-                <p className="text-sm text-gray-600">{headerInfo.subtitle}</p>
+                {activeChat != "global" &&
+                  <button className="cursor-pointer bg-blue-400 p-3 rounded-4xl hover:bg-blue-500" onClick={() => handleVideoCall(headerInfo.id)}>
+                    <FaVideo size={22} />
+                  </button>}
               </div>
             </div>
           </div>

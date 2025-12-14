@@ -43,9 +43,9 @@ const io = new SocketIOServer(server, {
 io.on("connection", (socket) => {
   console.log("New socket connected:", socket.id);
 
-  socket.on("initiate video call", async (receiverEmail) => {
-    if (!receiverEmail) {
-      console.log("Receiver email not  found");
+  socket.on("initiate video call", async (receiverId, callerId) => {
+    if (!receiverId) {
+      console.log("Receiver not  found");
       return;
     }
 
@@ -53,18 +53,18 @@ io.on("connection", (socket) => {
     try {
       const [sender, receiver] = await Promise.all([
         prisma.user.findUnique({
-          where: { socketId: socket.id },
+          where: { id: callerId },
         }),
         prisma.user.findUnique({
-          where: { email: receiverEmailv },
+          where: { id: receiverId },
         }),
       ]);
 
       const message = await prisma.messages.create({
         data: {
-          content: msg.content,
-          senderId: parseInt(msg.senderId),
-          receiverId: parseInt(msg.receiverId),
+          content: "video Call",
+          senderId: parseInt(callerId),
+          receiverId: parseInt(receiverId),
           isGlobal: false,
         },
         include: {
@@ -74,9 +74,12 @@ io.on("connection", (socket) => {
       });
       io.to(receiver.socketId).emit("want to video call", message);
     } catch (err) {
-      console.log(`Error calling ${receiverEmail}`);
+      console.log(err);
+      console.log(`Error calling ${receiverId}`);
     }
   });
+
+  socket.on("receive video call", async () => {});
 
   socket.on("user connected", async (userData) => {
     try {
