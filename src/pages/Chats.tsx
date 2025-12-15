@@ -23,6 +23,7 @@ const Home: React.FC = () => {
       unreadCount: number;
     }>
   >([]);
+  const [roomId, setRoomId] = useState<string>("");
   const [videoModal, setVideoModal] = useState<"receiving" | "off" | "calling" | "live">("off");
 
   // WhatsApp-like state management
@@ -198,17 +199,17 @@ const Home: React.FC = () => {
       }
     });
 
-    socket.on("receive video call", () => {
+    socket.on("want to video call", (roomId) => {
       setVideoModal(() => "receiving");
-
-
+      console.log(`room Id set to ${roomId}`);
+      setRoomId(() => roomId);
     });
 
     // Cleanup listeners on unmount
     return () => {
       socket.off("Global message");
       socket.off("Private message");
-      socket.off("receive video call");
+      socket.off("want to video  call");
     };
   }, [socket, isLoggedIn, navigate, userdata.id, users]);
 
@@ -270,6 +271,8 @@ const Home: React.FC = () => {
       navigate("/login");
     }
   };
+
+
 
   const handleVideoCall = async (receiverId: number | undefined) => {
     // open  modal of calling
@@ -335,7 +338,7 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* // Video  Calling Modal */}
-      {videoModal != "off" && <VideoCallingModal st={videoModal} onChangeModal={handleChangeModal} />}
+      {videoModal != "off" && <VideoCallingModal st={videoModal} onChangeModal={handleChangeModal} roomId={roomId} />}
 
       <div className="flex h-screen w-full bg-gray-100">
         {/* Left Sidebar - Conversations */}

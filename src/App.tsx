@@ -6,23 +6,27 @@ import { UserContextProvider } from "./context/UserContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NavigationBridge from "./components/NavigationBridge";
+import { PeerProvider } from "./context/Peer";
 
 function App() {
   return (
     <div className="App">
       <SocketProvider>
-        <UserContextProvider>
-          <BrowserRouter>
-            <NavigationBridge />
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-            </Routes>
-          </BrowserRouter>
-        </UserContextProvider>
+        <PeerProvider>
+
+          <UserContextProvider>
+            <BrowserRouter>
+              <NavigationBridge />
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+              </Routes>
+            </BrowserRouter>
+          </UserContextProvider>
+        </PeerProvider>
       </SocketProvider>
-    </div>
+    </div >
   );
 }
 

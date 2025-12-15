@@ -52,5 +52,5 @@ model Messages {
    
   isRead        Boolean @default(false)
   contentType   ContentType @default(text)
-  roomId        Int?      @unique
+  roomId        String?      @unique
 }

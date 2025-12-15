@@ -8,7 +8,7 @@ import http from "http";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import morgan from "morgan";
-
+import crypto from "crypto";
 import { prisma } from "./db.js";
 
 import userRouter from "./routes/userRoutes.js";
@@ -60,26 +60,66 @@ io.on("connection", (socket) => {
         }),
       ]);
 
-      const message = await prisma.messages.create({
+      const roomId = crypto.randomBytes(8).toString("hex");
+
+      await prisma.messages.create({
         data: {
           content: "video Call",
           senderId: parseInt(callerId),
           receiverId: parseInt(receiverId),
+          roomId,
           isGlobal: false,
         },
-        include: {
-          sender: true,
-          receiver: true,
-        },
       });
-      io.to(receiver.socketId).emit("want to video call", message);
+
+      io.to(receiver.socketId).emit("want to video call", roomId);
     } catch (err) {
       console.log(err);
       console.log(`Error calling ${receiverId}`);
     }
   });
 
-  socket.on("receive video call", async () => {});
+  socket.on("receive video call", async (receiverId, roomId) => {
+    console.log("receiverd call");
+    try {
+      const message = await prisma.messages.findUnique({
+        where: { roomId },
+      });
+
+      if (!message) {
+        console.log("Invalid roomId:", roomId);
+        return;
+      }
+
+      await prisma.messages.update({
+        where: { roomId },
+        data: { isRead: true },
+      });
+    } catch (err) {
+      console.error("Error while receiving call:", err);
+    }
+  });
+
+  socket.on("reject video call", async (receiverId, roomId) => {
+    console.log("receiverd call");
+    try {
+      const message = await prisma.messages.findUnique({
+        where: { roomId },
+      });
+
+      if (!message) {
+        console.log("Invalid roomId:", roomId);
+        return;
+      }
+
+      await prisma.messages.update({
+        where: { roomId },
+        data: { isRead: false },
+      });
+    } catch (err) {
+      console.error("Error while receiving call:", err);
+    }
+  });
 
   socket.on("user connected", async (userData) => {
     try {

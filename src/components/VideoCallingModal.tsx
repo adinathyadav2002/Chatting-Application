@@ -1,9 +1,28 @@
 import React from 'react';
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, User } from 'lucide-react';
+import { useSocket } from '../hooks/useSocket';
+import { useUserContext } from '../hooks/useUser';
 
-export default function VideoCallingModal({ st, onChangeModal }: { st: "live" | "receiving" | "calling", onChangeModal: (modal: "receiving" | "off" | "calling" | "live") => void }) {
+export default function VideoCallingModal({ st, onChangeModal, roomId }: { st: "live" | "receiving" | "calling", onChangeModal: (modal: "receiving" | "off" | "calling" | "live") => void, roomId: string }) {
     const [isMuted, setIsMuted] = React.useState(false);
     const [isVideoOff, setIsVideoOff] = React.useState(false);
+    const { socket } = useSocket();
+    const { userdata } = useUserContext();
+
+    const handleVideoCallReponse = async (response: "accept" | "reject") => {
+        if (!socket) {
+            return;
+        }
+
+        if (response == "accept") {
+            socket.emit("receive video call", userdata.id, roomId);
+            onChangeModal("live");
+        }
+
+        if (response == "reject") {
+            socket.emit("reject video call", userdata.id, roomId);
+        }
+    }
 
     return (
         <div className='w-screen h-screen absolute inset-0 z-50'>
@@ -52,12 +71,12 @@ export default function VideoCallingModal({ st, onChangeModal }: { st: "live" | 
                     {st === "receiving" ? (
                         <>
                             {/* Accept Call */}
-                            <button className='w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex items-center justify-center shadow-lg  cursor-pointer'>
+                            <button className='w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex items-center justify-center shadow-lg  cursor-pointer' onClick={() => handleVideoCallReponse("accept")}>
                                 <Phone className='w-7 h-7 text-white' />
                             </button>
 
                             {/* Decline Call */}
-                            <button className='w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center shadow-lg cursor-pointer'>
+                            <button className='w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center shadow-lg cursor-pointer' onClick={() => handleVideoCallReponse("reject")}>
                                 <PhoneOff className='w-7 h-7 text-white' />
                             </button>
                         </>
