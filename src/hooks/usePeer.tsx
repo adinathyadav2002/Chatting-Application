@@ -1,7 +1,7 @@
 import { useContext } from "react";
-import { PeerContext } from "../context/Peer";
+import { PeerContext } from "../context/PeerContext";
 
-export const useUserContext = () => {
+export const usePeerContext = () => {
     const context = useContext(PeerContext);
     if (!context) {
         throw new Error("peerContext must be used within a PeerProvider");

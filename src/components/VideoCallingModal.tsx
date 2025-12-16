@@ -1,21 +1,45 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, User } from 'lucide-react';
 import { useSocket } from '../hooks/useSocket';
 import { useUserContext } from '../hooks/useUser';
+import { usePeerContext } from '../hooks/usePeer';
 
-export default function VideoCallingModal({ st, onChangeModal, roomId }: { st: "live" | "receiving" | "calling", onChangeModal: (modal: "receiving" | "off" | "calling" | "live") => void, roomId: string }) {
+export default function VideoCallingModal({ st, onChangeModal, roomId, onChangeRoomId }: { st: "live" | "receiving" | "calling", onChangeModal: (modal: "receiving" | "off" | "calling" | "live") => void, roomId: string, onChangeRoomId: (roomId: string) => void }) {
     const [isMuted, setIsMuted] = React.useState(false);
     const [isVideoOff, setIsVideoOff] = React.useState(false);
+    const offerRef = useRef<RTCSessionDescriptionInit | null>(null);
     const { socket } = useSocket();
     const { userdata } = useUserContext();
+    const { createAnswer } = usePeerContext();
+
+    useEffect(() => {
+        if (!socket) return;
+        socket.on("want to video call", (roomId, offer) => {
+            offerRef.current = offer;
+            onChangeModal("receiving");
+            console.log(`room Id set to ${roomId}`);
+            onChangeRoomId(roomId);
+        });
+        return () => {
+            socket.off("want to video  call");
+        };
+    }, [socket])
+
+
 
     const handleVideoCallReponse = async (response: "accept" | "reject") => {
         if (!socket) {
             return;
         }
 
+        if (!offerRef.current) {
+            socket.emit("reject video call", userdata.id, roomId);
+            return;
+        }
+
         if (response == "accept") {
-            socket.emit("receive video call", userdata.id, roomId);
+            const ans = await createAnswer(offerRef.current);
+            socket.emit("receive video call", userdata.id, roomId, ans);
             onChangeModal("live");
         }
 

@@ -43,7 +43,7 @@ const io = new SocketIOServer(server, {
 io.on("connection", (socket) => {
   console.log("New socket connected:", socket.id);
 
-  socket.on("initiate video call", async (receiverId, callerId) => {
+  socket.on("initiate video call", async (receiverId, callerId, offer) => {
     if (!receiverId) {
       console.log("Receiver not  found");
       return;
@@ -72,7 +72,7 @@ io.on("connection", (socket) => {
         },
       });
 
-      io.to(receiver.socketId).emit("want to video call", roomId);
+      io.to(receiver.socketId).emit("want to video call", roomId, offer);
     } catch (err) {
       console.log(err);
       console.log(`Error calling ${receiverId}`);

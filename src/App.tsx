@@ -6,7 +6,7 @@ import { UserContextProvider } from "./context/UserContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NavigationBridge from "./components/NavigationBridge";
-import { PeerProvider } from "./context/Peer";
+import { PeerProvider } from "./context/PeerContext";
 
 function App() {
   return (

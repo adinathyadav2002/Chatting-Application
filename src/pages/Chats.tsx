@@ -11,6 +11,7 @@ import { messageServices } from "../services/messageServices";
 import { useUserContext } from "../hooks/useUser";
 import { FaVideo } from "react-icons/fa";
 import VideoCallingModal from "../components/VideoCallingModal";
+import { usePeerContext } from "../hooks/usePeer";
 
 const Home: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -25,6 +26,7 @@ const Home: React.FC = () => {
   >([]);
   const [roomId, setRoomId] = useState<string>("");
   const [videoModal, setVideoModal] = useState<"receiving" | "off" | "calling" | "live">("off");
+  const { peer, createOffer } = usePeerContext();
 
   // WhatsApp-like state management
   const [activeChat, setActiveChat] = useState<"global" | User>("global");
@@ -199,11 +201,7 @@ const Home: React.FC = () => {
       }
     });
 
-    socket.on("want to video call", (roomId) => {
-      setVideoModal(() => "receiving");
-      console.log(`room Id set to ${roomId}`);
-      setRoomId(() => roomId);
-    });
+
 
     // Cleanup listeners on unmount
     return () => {
@@ -272,15 +270,19 @@ const Home: React.FC = () => {
     }
   };
 
-
-
   const handleVideoCall = async (receiverId: number | undefined) => {
     // open  modal of calling
     setVideoModal(() => "calling");
 
-    // send message to receiver through socket
-    socket?.emit("initiate video call", receiverId, userdata.id);
+    const offer = await createOffer();
 
+    // send message to receiver through socket
+    socket?.emit("initiate video call", receiverId, userdata.id, offer);
+
+  }
+
+  const handleRoomIdChange = (roomId: string) => {
+    setRoomId(roomId);
   }
 
   // Get messages for the current active chat
@@ -338,7 +340,7 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* // Video  Calling Modal */}
-      {videoModal != "off" && <VideoCallingModal st={videoModal} onChangeModal={handleChangeModal} roomId={roomId} />}
+      {videoModal != "off" && <VideoCallingModal st={videoModal} onChangeModal={handleChangeModal} roomId={roomId} onChangeRoomId={handleRoomIdChange} />}
 
       <div className="flex h-screen w-full bg-gray-100">
         {/* Left Sidebar - Conversations */}
@@ -409,7 +411,7 @@ const Home: React.FC = () => {
                         {conversation.user.name}
                       </h3>
                       {conversation.unreadCount > 0 && (
-                        <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                        <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-5 text-center">
                           {conversation.unreadCount}
                         </span>
                       )}
