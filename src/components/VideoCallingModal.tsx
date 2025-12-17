@@ -4,28 +4,13 @@ import { useSocket } from '../hooks/useSocket';
 import { useUserContext } from '../hooks/useUser';
 import { usePeerContext } from '../hooks/usePeer';
 
-export default function VideoCallingModal({ st, onChangeModal, roomId, onChangeRoomId }: { st: "live" | "receiving" | "calling", onChangeModal: (modal: "receiving" | "off" | "calling" | "live") => void, roomId: string, onChangeRoomId: (roomId: string) => void }) {
+export default function VideoCallingModal({ st, onChangeModal, roomId, onChangeRoomId, offerRef }: { st: "live" | "receiving" | "calling", onChangeModal: (modal: "receiving" | "off" | "calling" | "live") => void, roomId: string, onChangeRoomId: (roomId: string) => void, offerRef: React.RefObject<RTCSessionDescriptionInit | null> }) {
     const [isMuted, setIsMuted] = React.useState(false);
     const [isVideoOff, setIsVideoOff] = React.useState(false);
-    const offerRef = useRef<RTCSessionDescriptionInit | null>(null);
+
     const { socket } = useSocket();
     const { userdata } = useUserContext();
-    const { createAnswer } = usePeerContext();
-
-    useEffect(() => {
-        if (!socket) return;
-        socket.on("want to video call", (roomId, offer) => {
-            offerRef.current = offer;
-            onChangeModal("receiving");
-            console.log(`room Id set to ${roomId}`);
-            onChangeRoomId(roomId);
-        });
-        return () => {
-            socket.off("want to video  call");
-        };
-    }, [socket])
-
-
+    const { createAnswer, setRemoteAns } = usePeerContext();
 
     const handleVideoCallReponse = async (response: "accept" | "reject") => {
         if (!socket) {
@@ -38,15 +23,18 @@ export default function VideoCallingModal({ st, onChangeModal, roomId, onChangeR
         }
 
         if (response == "accept") {
+            console.log("receive video call 3333");
             const ans = await createAnswer(offerRef.current);
-            socket.emit("receive video call", userdata.id, roomId, ans);
+            socket.emit("received video call", userdata.id, roomId, ans);
             onChangeModal("live");
         }
 
         if (response == "reject") {
-            socket.emit("reject video call", userdata.id, roomId);
+            socket.emit("rejected video call", userdata.id, roomId);
         }
     }
+
+    useEffect(() => { if (!socket) return; }, [])
 
     return (
         <div className='w-screen h-screen absolute inset-0 z-50'>

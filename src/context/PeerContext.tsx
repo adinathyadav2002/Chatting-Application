@@ -6,6 +6,7 @@ type PeerContextType = {
     createAnswer: (
         offer: RTCSessionDescriptionInit
     ) => Promise<RTCSessionDescriptionInit>;
+    setRemoteAns: (ans: RTCSessionDescriptionInit) => Promise<void>;
 };
 
 export const PeerContext = createContext<PeerContextType | null>(null);
@@ -28,10 +29,12 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
         return answer;
     };
 
-    // const
+    const setRemoteAns = async (ans: RTCSessionDescriptionInit) => {
+        await peer.setRemoteDescription(ans);
+    }
 
     return (
-        <PeerContext.Provider value={{ peer, createOffer, createAnswer }}>
+        <PeerContext.Provider value={{ peer, createOffer, createAnswer, setRemoteAns }}>
             {children}
         </PeerContext.Provider>
     );

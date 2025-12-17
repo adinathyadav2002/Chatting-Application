@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { GlobalMessages, Message, PrivateMessage } from "../types";
 import type { User } from "../types/user";
 import MessageList from "../components/MessageList";
@@ -36,6 +36,20 @@ const Home: React.FC = () => {
     useUserContext();
   const { socket, isConnected } = useSocket();
   const navigate = useNavigate();
+  const offerRef = useRef<RTCSessionDescriptionInit | null>(null);
+
+  useEffect(() => {
+    if (!socket) return;
+    socket.on("want to video call", (roomId, offer) => {
+      offerRef.current = offer;
+      setVideoModal("receiving");
+      console.log(`room Id set to ${roomId}`);
+      setRoomId(roomId);
+    });
+    return () => {
+      socket.off("want to video  call");
+    };
+  }, [socket])
 
   // fetch global messages
   useEffect(() => {
@@ -340,7 +354,7 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* // Video  Calling Modal */}
-      {videoModal != "off" && <VideoCallingModal st={videoModal} onChangeModal={handleChangeModal} roomId={roomId} onChangeRoomId={handleRoomIdChange} />}
+      {videoModal != "off" && <VideoCallingModal st={videoModal} onChangeModal={handleChangeModal} roomId={roomId} onChangeRoomId={handleRoomIdChange} offerRef={offerRef} />}
 
       <div className="flex h-screen w-full bg-gray-100">
         {/* Left Sidebar - Conversations */}

@@ -79,8 +79,8 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("receive video call", async (receiverId, roomId) => {
-    console.log("receiverd call");
+  socket.on("received video call", async (receiverId, roomId, ans) => {
+    console.log("receiver call");
     try {
       const message = await prisma.messages.findUnique({
         where: { roomId },
@@ -95,12 +95,14 @@ io.on("connection", (socket) => {
         where: { roomId },
         data: { isRead: true },
       });
+
+      io.to(socket).emit("receiver accepted call", message.senderId, ans);
     } catch (err) {
       console.error("Error while receiving call:", err);
     }
   });
 
-  socket.on("reject video call", async (receiverId, roomId) => {
+  socket.on("rejected video call", async (receiverId, roomId) => {
     console.log("receiverd call");
     try {
       const message = await prisma.messages.findUnique({
