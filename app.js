@@ -86,6 +86,10 @@ io.on("connection", (socket) => {
         where: { roomId },
       });
 
+      const sender = await prisma.user.findFirst({
+        where: { id: message.senderId },
+      });
+
       if (!message) {
         console.log("Invalid roomId:", roomId);
         return;
@@ -96,7 +100,9 @@ io.on("connection", (socket) => {
         data: { isRead: true },
       });
 
-      io.to(socket).emit("receiver accepted call", message.senderId, ans);
+      console.log(`answer ${ans}`);
+
+      io.to(sender.socketId).emit("receiver accepted call", ans);
     } catch (err) {
       console.error("Error while receiving call:", err);
     }
@@ -258,6 +264,26 @@ io.on("connection", (socket) => {
       }
     } catch (err) {
       console.error("Error sending private message:", err);
+    }
+  });
+
+  socket.on("ice-candidate", async (data) => {
+    const message = await prisma.messages.findUnique({
+      where: { roomId: data.roomId },
+      include: {
+        sender: true,
+        receiver: true,
+      },
+    });
+    // Send this candidate to the other user in the room
+    if (data.userId == message.receiver.id) {
+      socket.to(message.sender.socketId).emit("ice-candidate", {
+        candidate: data.candidate,
+      });
+    } else {
+      socket.to(message.receiver.socketId).emit("ice-candidate", {
+        candidate: data.candidate,
+      });
     }
   });
 

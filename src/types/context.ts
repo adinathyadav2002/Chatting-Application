@@ -21,4 +21,6 @@ export interface UserContextType {
   isLoggedIn: boolean;
   setIsLoggedIn: (isLoggedIn: boolean) => void;
   setNavigateFn: (navigateFn: ((path: string) => void) | null) => void;
+  roomId: string;
+  setRoomId: (roomId: string) => void;
 }

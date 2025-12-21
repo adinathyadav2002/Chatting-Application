@@ -12,9 +12,8 @@ function App() {
   return (
     <div className="App">
       <SocketProvider>
-        <PeerProvider>
-
-          <UserContextProvider>
+        <UserContextProvider>
+          <PeerProvider>
             <BrowserRouter>
               <NavigationBridge />
               <Routes>
@@ -23,8 +22,8 @@ function App() {
                 <Route path="/register" element={<Register />} />
               </Routes>
             </BrowserRouter>
-          </UserContextProvider>
-        </PeerProvider>
+          </PeerProvider>
+        </UserContextProvider>
       </SocketProvider>
     </div >
   );

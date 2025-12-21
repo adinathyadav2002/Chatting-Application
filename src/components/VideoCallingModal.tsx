@@ -1,40 +1,41 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, User } from 'lucide-react';
 import { useSocket } from '../hooks/useSocket';
-import { useUserContext } from '../hooks/useUser';
+import ReactPlayer from "react-player";
 import { usePeerContext } from '../hooks/usePeer';
 
-export default function VideoCallingModal({ st, onChangeModal, roomId, onChangeRoomId, offerRef }: { st: "live" | "receiving" | "calling", onChangeModal: (modal: "receiving" | "off" | "calling" | "live") => void, roomId: string, onChangeRoomId: (roomId: string) => void, offerRef: React.RefObject<RTCSessionDescriptionInit | null> }) {
+export default function VideoCallingModal({ st, onChangeModal, handleVideoCallReponse }: { st: "live" | "receiving" | "calling", onChangeModal: (modal: "receiving" | "off" | "calling" | "live") => void, handleVideoCallReponse: (response: "accept" | "reject") => void }) {
     const [isMuted, setIsMuted] = React.useState(false);
     const [isVideoOff, setIsVideoOff] = React.useState(false);
+    const [myStream, setMyStream] = useState<MediaStream | null>(null);
 
     const { socket } = useSocket();
-    const { userdata } = useUserContext();
-    const { createAnswer, setRemoteAns } = usePeerContext();
+    const { setRemoteAns } = usePeerContext();
 
-    const handleVideoCallReponse = async (response: "accept" | "reject") => {
-        if (!socket) {
-            return;
-        }
+    const getUserMediaStream = useCallback(async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        setMyStream(stream);
+    }, []);
 
-        if (!offerRef.current) {
-            socket.emit("reject video call", userdata.id, roomId);
-            return;
-        }
+    useEffect(() => {
+        getUserMediaStream();
+    }, [getUserMediaStream])
 
-        if (response == "accept") {
-            console.log("receive video call 3333");
-            const ans = await createAnswer(offerRef.current);
-            socket.emit("received video call", userdata.id, roomId, ans);
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on("receiver accepted call", async (ans: RTCSessionDescriptionInit) => {
+            console.log(ans);
+            await setRemoteAns(ans)
             onChangeModal("live");
-        }
+        });
 
-        if (response == "reject") {
-            socket.emit("rejected video call", userdata.id, roomId);
-        }
-    }
 
-    useEffect(() => { if (!socket) return; }, [])
+        return () => {
+            socket.off("receiver accepted call");
+
+        };
+    }, [socket, setRemoteAns, onChangeModal])
 
     return (
         <div className='w-screen h-screen absolute inset-0 z-50'>
@@ -65,7 +66,18 @@ export default function VideoCallingModal({ st, onChangeModal, roomId, onChangeR
                     {st === "live" && (
                         <div className='absolute top-4 right-4 w-48 h-36 bg-gray-700 rounded-lg overflow-hidden shadow-lg border-2 border-gray-600'>
                             <div className='w-full h-full flex items-center justify-center'>
-                                <User className='w-12 h-12 text-gray-500' />
+                                <video
+                                    autoPlay
+                                    muted
+                                    playsInline
+                                    ref={(video) => {
+                                        if (video && myStream) {
+                                            video.srcObject = myStream;
+                                        }
+                                    }}
+                                    className="w-full h-full object-cover"
+                                />
+
                             </div>
                         </div>
                     )}

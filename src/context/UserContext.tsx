@@ -15,7 +15,9 @@ export function UserContextProvider({
     isOnline: false,
   });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [roomId, setRoomId] = useState("");
   const { socket } = useSocket();
+
   const [navigateFn, setNavigateFn] = useState<((path: string) => void) | null>(
     null
   );
@@ -63,6 +65,8 @@ export function UserContextProvider({
         isLoggedIn,
         setIsLoggedIn,
         setNavigateFn,
+        roomId,
+        setRoomId
       }}
     >
       {children}

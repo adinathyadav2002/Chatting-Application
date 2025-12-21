@@ -1,3 +1,33 @@
+/*
+ User A (You)                          User B (Friend)
+    |                                       |
+    | ------1. Create Offer------> -------- |
+    |                                       |
+    |< ----- 2. Send Answer------< ---------|
+    |                                       |
+    | ------3. ICE Candidates-- > ----------|  
+    |                                       |
+    |< ----- 4. ICE Candidates-- -< --------|  
+    |                                       |
+    |====== 5. Connection Established ======|
+
+
+    1. Peer A creates offer
+      ↓ (ICE candidates start generating immediately)
+    2. ICE candidates are being discovered (happening in background)
+      ↓
+    3. Offer sent to Peer B
+      ↓
+    4. Peer B receives offer, creates answer
+      ↓ (More ICE candidates generating on both sides)
+    5. Answer sent back to Peer A
+      ↓
+    6. ICE candidates continue to be exchanged
+      ↓
+    7. Connection established!
+*/
+
+
 import React, { useState, useEffect, useRef } from "react";
 import type { GlobalMessages, Message, PrivateMessage } from "../types";
 import type { User } from "../types/user";
@@ -24,15 +54,15 @@ const Home: React.FC = () => {
       unreadCount: number;
     }>
   >([]);
-  const [roomId, setRoomId] = useState<string>("");
   const [videoModal, setVideoModal] = useState<"receiving" | "off" | "calling" | "live">("off");
-  const { peer, createOffer } = usePeerContext();
+  const { peer, createOffer, createAnswer } = usePeerContext();
+
 
   // WhatsApp-like state management
   const [activeChat, setActiveChat] = useState<"global" | User>("global");
   const [users, setUsers] = useState<User[]>([]);
 
-  const { userdata, isLoggedIn, handleUpdateUser, setIsLoggedIn } =
+  const { userdata, isLoggedIn, handleUpdateUser, setIsLoggedIn, roomId, setRoomId } =
     useUserContext();
   const { socket, isConnected } = useSocket();
   const navigate = useNavigate();
@@ -47,9 +77,32 @@ const Home: React.FC = () => {
       setRoomId(roomId);
     });
     return () => {
-      socket.off("want to video  call");
+      socket.off("want to video call");
     };
+
   }, [socket])
+
+
+  useEffect(() => {
+
+    if (!socket) return;
+
+    //  Receive ICE candidates from the OTHER peer
+    socket.on("ice-candidate", async (data: { candidate: RTCIceCandidateInit }) => {
+      try {
+        console.log("Received ICE candidate from remote peer");
+        // 4. Add the OTHER peer's candidate to YOUR peer connection
+        await peer.addIceCandidate(new RTCIceCandidate(data.candidate));
+      } catch (error) {
+        console.error("Error adding ICE candidate:", error);
+      }
+    });
+
+    return () => {
+      socket.off("ice-candidate");
+    };
+  }, [socket]);
+
 
   // fetch global messages
   useEffect(() => {
@@ -225,6 +278,28 @@ const Home: React.FC = () => {
     };
   }, [socket, isLoggedIn, navigate, userdata.id, users]);
 
+  const handleVideoCallReponse = async (response: "accept" | "reject") => {
+    if (!socket) {
+      return;
+    }
+
+    if (!offerRef.current) {
+      socket.emit("reject video call", userdata.id, roomId);
+      return;
+    }
+
+    if (response == "accept") {
+      console.log("receive video call 3333");
+      const ans = await createAnswer(offerRef.current);
+      socket.emit("received video call", userdata.id, roomId, ans);
+      setVideoModal("live");
+    }
+
+    if (response == "reject") {
+      socket.emit("rejected video call", userdata.id, roomId);
+    }
+  }
+
   const handleSendMessage = (content: string) => {
     if (!socket || !isConnected || !userdata.id) {
       return;
@@ -354,7 +429,7 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* // Video  Calling Modal */}
-      {videoModal != "off" && <VideoCallingModal st={videoModal} onChangeModal={handleChangeModal} roomId={roomId} onChangeRoomId={handleRoomIdChange} offerRef={offerRef} />}
+      {videoModal != "off" && <VideoCallingModal st={videoModal} onChangeModal={handleChangeModal} handleVideoCallReponse={handleVideoCallReponse} />}
 
       <div className="flex h-screen w-full bg-gray-100">
         {/* Left Sidebar - Conversations */}
