@@ -29,7 +29,6 @@ const Home: React.FC = () => {
   const [videoModal, setVideoModal] = useState<"receiving" | "off" | "calling" | "live">("off");
   const offerRef = useRef<RTCSessionDescriptionInit | null>(null);
 
-  // WhatsApp-like state management
   const [activeChat, setActiveChat] = useState<"global" | User>("global");
   const [users, setUsers] = useState<User[]>([]);
 
@@ -37,7 +36,6 @@ const Home: React.FC = () => {
   const { userdata, isLoggedIn, handleUpdateUser, setIsLoggedIn, roomId, setRoomId, roomIdRef } =
     useUserContext();
   const { socket, isConnected } = useSocket();
-
 
   useEffect(() => {
     if (!socket) return;
@@ -55,11 +53,9 @@ const Home: React.FC = () => {
 
   }, [socket])
 
-
   useEffect(() => {
     if (!socket) return;
 
-    //  Receive ICE candidates from the OTHER peer
     socket.on("ice-candidate", async (data: { candidate: RTCIceCandidateInit }) => {
       try {
         addIceCandidate(data.candidate);
@@ -73,8 +69,6 @@ const Home: React.FC = () => {
     };
   }, [socket]);
 
-
-  // fetch global messages
   useEffect(() => {
     const fetchGlobalMessages = async () => {
       try {
@@ -98,7 +92,6 @@ const Home: React.FC = () => {
   }, [userdata]);
 
   useEffect(() => {
-    // Fetch private messages for the current user
     const fetchPrivateMessages = async () => {
       try {
         if (!userdata.id) return;
@@ -125,7 +118,6 @@ const Home: React.FC = () => {
   useEffect(() => {
     if (!socket) return;
     socket.on("online-users", (onlineUsers) => {
-      // console.log("Received online-users event:", onlineUsers);
       setUsers((prevUsers) =>
         prevUsers.map((user) => {
           const isOnline = onlineUsers.find(
@@ -141,7 +133,6 @@ const Home: React.FC = () => {
     };
   }, [socket]);
 
-  // Fetch all users on component mount
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -158,7 +149,7 @@ const Home: React.FC = () => {
   }, [userdata]);
 
   useEffect(() => {
-    if (!socket) return; // Listen for incoming global messages
+    if (!socket) return;
     socket.on(
       "Global message",
       (messageData: {
@@ -168,7 +159,6 @@ const Home: React.FC = () => {
         content: string;
         createdAt: string;
       }) => {
-        // console.log(messageData, "Received global message data");
         const newMessage: any = {
           id: Date.now().toString(),
           userId: (messageData.senderId || "unknown").toString(),
@@ -198,7 +188,6 @@ const Home: React.FC = () => {
 
       setPrivateMessages((prev) => [...prev, newMessage]);
 
-      // Update or create conversation preview
       const user = users.find((u) => u.id.toString() === otherUserId);
       if (user) {
         setConversations((prev) => {
@@ -238,9 +227,6 @@ const Home: React.FC = () => {
       }
     });
 
-
-
-    // Cleanup listeners on unmount
     return () => {
       socket.off("Global message");
       socket.off("Private message");
@@ -283,10 +269,8 @@ const Home: React.FC = () => {
         timestamp: new Date().toISOString(),
       };
 
-      // Emit message to server
       socket.emit("Global message", messageData);
     } else {
-      // Send private message
       const messageData = {
         name: userdata.name || "Anonymous",
         content,
@@ -302,7 +286,6 @@ const Home: React.FC = () => {
   const handleChatSelect = (chat: "global" | User) => {
     setActiveChat(chat);
 
-    // Mark messages as read if selecting a private chat
     if (chat !== "global") {
       setConversations((prev) =>
         prev.map((c) => (c.user.id === chat.id ? { ...c, unreadCount: 0 } : c))
@@ -335,24 +318,18 @@ const Home: React.FC = () => {
   }, []);
 
   useEffect(() => {
-
     getUserMediaStream();
   }, [getUserMediaStream])
 
   const handleVideoCall = async (receiverId: number | undefined) => {
-
-
     setVideoModal(() => "calling");
 
-    // Generate roomId FIRST and set it BEFORE creating offer
     const newRoomId = `room-${userdata.id}-${receiverId}-${Date.now()}`;
     console.log("🎬 Setting roomId:", newRoomId);
 
-    // Set roomId synchronously so it's available for the ICE handler
     setRoomId(newRoomId);
     if (roomIdRef) roomIdRef.current = newRoomId;
 
-    // Wait for next tick to ensure state is updated
     await new Promise(resolve => setTimeout(resolve, 0));
 
     try {
@@ -373,12 +350,10 @@ const Home: React.FC = () => {
     setRoomId(roomId);
   }
 
-  // Get messages for the current active chat
   const getCurrentMessages = () => {
     if (activeChat === "global") {
       return messages;
     } else {
-      // Convert private messages to Message format for display
       return privateMessages
         .filter(
           (msg) =>
@@ -402,7 +377,6 @@ const Home: React.FC = () => {
     }
   };
 
-  // Get chat header info
   const getChatHeader = () => {
     if (activeChat === "global") {
       return {
@@ -423,92 +397,81 @@ const Home: React.FC = () => {
   }
 
   const handleEndCall = () => {
-    // Stop local media
     if (myStream) {
       myStream.getTracks().forEach(track => track.stop());
     }
 
-    // Stop remote media
     if (remoteStream) {
       remoteStream.getTracks().forEach(track => track.stop());
     }
 
-    // Close peer connection
     if (peer && peer.connectionState !== "closed") {
       peer.onicecandidate = null;
       peer.ontrack = null;
       peer.close();
     }
 
-    // Reset refs
     if (roomIdRef)
       roomIdRef.current = null;
     offerRef.current = null;
 
-    // Reset UI state
     setVideoModal("off");
   }
-
 
   const headerInfo = getChatHeader();
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* // Video  Calling Modal */}
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
       {videoModal != "off" && <VideoCallingModal st={videoModal} onChangeModal={handleChangeModal} handleVideoCallReponse={handleVideoCallReponse} myStream={myStream} handleEndCall={handleEndCall} />}
 
-      <div className="flex h-screen w-full bg-gray-100">
+      <div className="flex h-screen w-full bg-gradient-to-br from-gray-900 via-black to-gray-900">
         {/* Left Sidebar - Conversations */}
-        <div className="w-80 bg-white border-r border-gray-300 flex flex-col">
+        <div className="w-80 bg-gradient-to-b from-gray-900 to-black border-r border-white/10 flex flex-col">
           {/* Sidebar Header */}
-          <div className="p-4 bg-gray-50 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-800">Chats</h2>
+          <div className="px-4 py-6 bg-black/40 backdrop-blur-sm border-b border-white/10 flex flex-row items-center justify-between text-gray-400">
+            <div className="flex flex-col">
+              <h2 className="text-lg font-semibold text-white">Chats</h2>
+
+            </div>
+            <div className="flex h-4 items-center gap-2 text-sm ">
               <button
                 onClick={handleLogout}
-                className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm transition-colors"
+                className="px-3 py-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg text-sm transition-all duration-200"
               >
                 Logout
               </button>
-            </div>
-            <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
-              <span
-                className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-400" : "bg-red-400"
-                  }`}
-              ></span>
-              {isConnected ? "Connected" : "Disconnected"}
             </div>
           </div>
 
           {/* Conversations List */}
           <div className="flex-1 overflow-y-auto">
-            {" "}
             {/* Global Chat Row */}
             <div
               onClick={() => handleChatSelect("global")}
-              className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${activeChat === "global"
-                ? "bg-blue-50 border-l-4 border-l-blue-500"
+              className={`p-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${activeChat === "global"
+                ? "bg-white/10 border-l-4 border-l-white"
                 : ""
                 }`}
             >
               <div className="flex items-center gap-3">
                 <Avatar type="global" size="lg" emoji="G" />
                 <div className="flex-1">
-                  <h3 className="font-medium text-gray-900">Global Chat</h3>
-                  <p className="text-sm text-gray-600">
+                  <h3 className="font-medium text-white">Global Chat</h3>
+                  <p className="text-sm text-gray-400">
                     {users.filter((u) => u.isOnline).length} users online
                   </p>
                 </div>
               </div>
-            </div>{" "}
+            </div>
+
             {/* Private Conversations */}
             {conversations.map((conversation) => (
               <div
                 key={conversation.user.id}
                 onClick={() => handleChatSelect(conversation.user)}
-                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${activeChat !== "global" &&
+                className={`p-3 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${activeChat !== "global" &&
                   activeChat.id === conversation.user.id
-                  ? "bg-blue-50 border-l-4 border-l-blue-500"
+                  ? "bg-white/10 border-l-4 border-l-white"
                   : ""
                   }`}
               >
@@ -522,26 +485,26 @@ const Home: React.FC = () => {
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-medium text-gray-900 truncate">
+                      <h3 className="font-medium text-white truncate">
                         {conversation.user.name}
                       </h3>
                       {conversation.unreadCount > 0 && (
-                        <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-5 text-center">
+                        <span className="bg-white text-black text-xs rounded-full px-2 py-1 min-w-5 text-center font-semibold">
                           {conversation.unreadCount}
                         </span>
                       )}
                     </div>
                     {conversation.lastMessage && (
-                      <p className="text-sm text-gray-600 truncate">
+                      <p className="text-sm text-gray-400 truncate">
                         {conversation.lastMessage}
                       </p>
                     )}
                   </div>
                 </div>
               </div>
-            ))}{" "}
+            ))}
 
-            {/* Other Users (not in conversations yet) */}
+            {/* Other Users */}
             {users
               .filter(
                 (user) =>
@@ -552,8 +515,8 @@ const Home: React.FC = () => {
                 <div
                   key={user.id}
                   onClick={() => handleChatSelect(user)}
-                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${activeChat !== "global" && activeChat.id === user.id
-                    ? "bg-blue-50 border-l-4 border-l-blue-500"
+                  className={`p-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${activeChat !== "global" && activeChat.id === user.id
+                    ? "bg-white/10 border-l-4 border-l-white"
                     : ""
                     }`}
                 >
@@ -566,8 +529,8 @@ const Home: React.FC = () => {
                       emoji={user.avatar}
                     />
                     <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{user.name}</h3>
-                      <p className="text-sm text-gray-600">
+                      <h3 className="font-medium text-white">{user.name}</h3>
+                      <p className="text-sm text-gray-400">
                         {user.isOnline ? "Online" : "Offline"}
                       </p>
                     </div>
@@ -578,10 +541,9 @@ const Home: React.FC = () => {
         </div>
 
         {/* Right Main Chat Area */}
-        <div className="flex-1 flex flex-col bg-white">
-          {" "}
+        <div className="flex-1 flex flex-col bg-gradient-to-br from-black to-gray-900">
           {/* Chat Header */}
-          <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <div className="p-4 border-b border-white/10 bg-black/40 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {activeChat !== "global" ? (
@@ -590,25 +552,27 @@ const Home: React.FC = () => {
                   <Avatar type="global" size="md" emoji="G" />
                 )}
                 <div>
-                  <h3 className="font-semibold text-gray-900">
+                  <h3 className="font-semibold text-white">
                     {headerInfo.title}
                   </h3>
-                  <p className="text-sm text-gray-600">{headerInfo.subtitle}</p>
+                  <p className="text-sm text-gray-400">{headerInfo.subtitle}</p>
                 </div>
               </div>
               <div>
                 {activeChat != "global" &&
-                  <button className="cursor-pointer bg-blue-400 p-3 rounded-4xl hover:bg-blue-500" onClick={() => handleVideoCall(headerInfo.id)}>
-                    <FaVideo size={22} />
+                  <button className="cursor-pointer bg-gradient-to-r from-white to-gray-300 text-black p-3 rounded-xl hover:from-gray-100 hover:to-gray-200 transition-all duration-200 hover:scale-105 active:scale-95" onClick={() => handleVideoCall(headerInfo.id)}>
+                    <FaVideo size={20} />
                   </button>}
               </div>
             </div>
           </div>
+
           {/* Messages */}
           <MessageList
             messages={getCurrentMessages()}
             currentUserId={userdata.id || 0}
           />
+
           {/* Message Input */}
           <MessageInput
             onSendMessage={handleSendMessage}

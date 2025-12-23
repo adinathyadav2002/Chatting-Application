@@ -28,8 +28,6 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { socket, isConnected } = useSocket();
 
-  // const { socket } = useSocket();
-
   const showToastMessage = (message: string, type: "success" | "error") => {
     setToastMessage(message);
     setToastType(type);
@@ -62,16 +60,14 @@ const Login: React.FC = () => {
       if (user && token) {
         localStorage.setItem("jwt", token);
         socket.emit("user connected", { userId: user?.id });
-        // Login successful
-        showToastMessage(`Welcome back, ${user?.name}! 🎉`, "success");
-        // Update user context
+        showToastMessage(`Welcome back, ${user?.name}!`, "success");
         navigate("/");
       }
 
     } catch (err) {
-      console.log(`gott erroor ${err}`);
+      console.log(`got error ${err}`);
     } finally {
-      console.log("set loading to falsse");
+      console.log("set loading to false");
       setIsLoading(false);
 
       showToastMessage("Invalid email or password. Please try again.", "error");
@@ -79,7 +75,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center p-4">
       {/* Toast Notification */}
       {showToast && (
         <div
@@ -90,116 +86,132 @@ const Login: React.FC = () => {
         >
           <div className="flex items-center gap-3">
             <span className="text-lg">
-              {toastType === "success" ? "✅" : "❌"}
+              {toastType === "success" ? "✓" : "✕"}
             </span>
             <span className="font-medium">{toastMessage}</span>
           </div>
         </div>
       )}
 
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="w-16 h-16  rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl text-white">
-                <img
-                  src="./favicon/apple-touch-icon.png"
-                  alt="logo"
-                  className="w-12 h-12"
-                />
-              </span>
+      <div className="w-full max-w-5xl bg-black/40 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/10 max-h-[95vh]">
+        <div className="flex h-full max-h-[95vh]">
+          {/* Left Side - Decorative */}
+          <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-gray-800 via-gray-900 to-black relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
+
+            {/* Geometric Shapes */}
+            <div className="absolute top-20 left-16 w-32 h-32 border-4 border-white/20 rounded-full"></div>
+            <div className="absolute top-40 right-24 w-24 h-24 border-4 border-white/15 rotate-45"></div>
+            <div className="absolute bottom-32 left-24 w-40 h-40 border-4 border-white/10"></div>
+            <div className="absolute bottom-20 right-16 w-28 h-28 border-4 border-white/20 rounded-full"></div>
+            <div className="absolute top-1/2 left-1/3 w-20 h-20 border-4 border-white/15 rotate-12"></div>
+
+            {/* Small accent shapes */}
+            <div className="absolute top-32 right-40 w-12 h-12 bg-white/5 rounded-full"></div>
+            <div className="absolute bottom-40 left-40 w-16 h-16 bg-white/5 rotate-45"></div>
+
+            <div className="relative z-10 flex flex-col items-center justify-center p-12 text-white">
+              <div className="text-center">
+                <h2 className="text-5xl font-bold mb-6 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                  Welcome Back
+                </h2>
+                <p className="text-xl text-gray-400 mb-8 leading-relaxed max-w-md">
+                  Sign in to access your account and continue your journey with us
+                </p>
+              </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">
-              Welcome Back
-            </h1>
-            <p className="text-gray-600">Sign in to join the conversation</p>
           </div>
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Username Field */}
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-semibold text-gray-700 mb-2"
-              >
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
-                placeholder="Enter your email"
-              />
-            </div>
 
-            {/* Password Field */}
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-semibold text-gray-700 mb-2"
-              >
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
-                placeholder="Enter your password"
-              />
-            </div>
-
-            {/* Remember Me */}
-            {/* <div className="flex items-center justify-between">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="ml-2 text-sm text-gray-600">Remember me</span>
-              </label>
-              <a
-                href="#"
-                className="text-sm text-blue-600 hover:text-blue-500 transition-colors"
-              >
-                Forgot password?
-              </a>
-            </div> */}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              // disabled={isLoading || !email.trim() || !password.trim()}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 active:scale-95"
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Signing in...
+          {/* Right Side - Form */}
+          <div className="w-full lg:w-1/2 p-6 lg:p-8 overflow-y-auto bg-gradient-to-br from-gray-900/50 to-black/50">
+            <div className="max-w-md mx-auto h-full flex flex-col justify-center">
+              {/* Header */}
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-white/10 backdrop-blur-sm border border-white/20">
+                  <span className="text-2xl">
+                    <img
+                      src="./favicon/apple-touch-icon.png"
+                      alt="logo"
+                      className="w-12 h-12"
+                    />
+                  </span>
                 </div>
-              ) : (
-                "Sign In"
-              )}
-            </button>
-          </form>
-          {/* Footer */}
-          <div className="mt-8 text-center">
-            <p className="text-gray-600">
-              Don't have an account?{" "}
-              <Link
-                to="/register"
-                className="text-blue-600 hover:text-blue-500 font-semibold transition-colors"
-              >
-                Create one
-              </Link>
-            </p>
-          </div>{" "}
+                <h1 className="text-3xl font-bold text-white mb-2">
+                  Sign In
+                </h1>
+                <p className="text-gray-400">Enter your credentials to continue</p>
+              </div>
+
+              {/* Login Form */}
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Email Field */}
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-semibold text-gray-300 mb-2"
+                  >
+                    Email Address
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent transition-all duration-200 bg-white/5 hover:bg-white/10 text-white placeholder-gray-500 backdrop-blur-sm"
+                    placeholder="Enter your email"
+                  />
+                </div>
+
+                {/* Password Field */}
+                <div>
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-semibold text-gray-300 mb-2"
+                  >
+                    Password
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent transition-all duration-200 bg-white/5 hover:bg-white/10 text-white placeholder-gray-500 backdrop-blur-sm"
+                    placeholder="Enter your password"
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-white to-gray-300 text-black py-3 px-4 rounded-2xl font-semibold hover:from-gray-100 hover:to-gray-200 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-black disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed disabled:text-gray-400 transition-all duration-200"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Signing in...
+                    </div>
+                  ) : (
+                    "Sign In"
+                  )}
+                </button>
+              </form>
+
+              {/* Footer */}
+              <div className="mt-8 text-center">
+                <p className="text-gray-400">
+                  Don't have an account?{" "}
+                  <Link
+                    to="/register"
+                    className="text-white hover:text-gray-300 font-semibold transition-colors"
+                  >
+                    Create one
+                  </Link>
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
