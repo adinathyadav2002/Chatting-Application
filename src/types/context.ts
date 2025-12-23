@@ -1,8 +1,10 @@
+import type { RefObject } from "react";
 import { Socket } from "socket.io-client";
 
 export interface SocketContextType {
   socket: Socket | null;
   isConnected: boolean;
+  socketRef: RefObject<Socket | null> | null;
 }
 
 export interface userDataType {
@@ -23,4 +25,6 @@ export interface UserContextType {
   setNavigateFn: (navigateFn: ((path: string) => void) | null) => void;
   roomId: string;
   setRoomId: (roomId: string) => void;
+  userIdRef?: RefObject<number | null>;
+  roomIdRef?: RefObject<string | null>;
 }

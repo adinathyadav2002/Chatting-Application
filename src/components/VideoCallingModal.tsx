@@ -1,25 +1,14 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, User } from 'lucide-react';
 import { useSocket } from '../hooks/useSocket';
-import ReactPlayer from "react-player";
 import { usePeerContext } from '../hooks/usePeer';
 
-export default function VideoCallingModal({ st, onChangeModal, handleVideoCallReponse }: { st: "live" | "receiving" | "calling", onChangeModal: (modal: "receiving" | "off" | "calling" | "live") => void, handleVideoCallReponse: (response: "accept" | "reject") => void }) {
+export default function VideoCallingModal({ st, onChangeModal, handleVideoCallReponse, myStream, handleEndCall }: { st: "live" | "receiving" | "calling", onChangeModal: (modal: "receiving" | "off" | "calling" | "live") => void, handleVideoCallReponse: (response: "accept" | "reject") => void, myStream: MediaStream | null, handleEndCall: () => void }) {
     const [isMuted, setIsMuted] = React.useState(false);
     const [isVideoOff, setIsVideoOff] = React.useState(false);
-    const [myStream, setMyStream] = useState<MediaStream | null>(null);
 
     const { socket } = useSocket();
-    const { setRemoteAns } = usePeerContext();
-
-    const getUserMediaStream = useCallback(async () => {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-        setMyStream(stream);
-    }, []);
-
-    useEffect(() => {
-        getUserMediaStream();
-    }, [getUserMediaStream])
+    const { setRemoteAns, remoteStream } = usePeerContext();
 
     useEffect(() => {
         if (!socket) return;
@@ -30,43 +19,57 @@ export default function VideoCallingModal({ st, onChangeModal, handleVideoCallRe
             onChangeModal("live");
         });
 
-
         return () => {
             socket.off("receiver accepted call");
-
         };
     }, [socket, setRemoteAns, onChangeModal])
 
     return (
-        <div className='w-screen h-screen absolute inset-0 z-50'>
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+        <div className='w-screen h-screen fixed inset-0 z-50 flex items-center justify-center'>
+            <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/70 to-black/80 backdrop-blur-md"></div>
 
-            <div className='w-full max-w-4xl h-3/4 bg-gray-900 rounded-2xl flex flex-col overflow-hidden shadow-2xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
+            <div className='w-full max-w-5xl mx-4 h-[90vh] md:h-auto md:max-h-[85vh] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-3xl flex flex-col overflow-hidden shadow-2xl relative border border-gray-700/50'>
 
                 {/* Video Area */}
-                <div className='flex-1 relative bg-gray-800 flex items-center justify-center'>
-                    {/* Remote Video Placeholder */}
-                    <div className='w-full h-full flex items-center justify-center'>
-                        <div className='flex flex-col items-center gap-4'>
-                            <div className='w-32 h-32 rounded-full bg-gray-700 flex items-center justify-center'>
-                                <User className='w-16 h-16 text-gray-400' />
+                <div className='flex-1 relative bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-2 md:p-6 rounded-t-3xl overflow-hidden'>
+                    {/* Remote Video */}
+                    <div className='w-full h-full flex items-center justify-center relative'>
+                        <div className='flex flex-col items-center gap-3 md:gap-4 w-full h-full'>
+                            <div className='w-full h-full rounded-2xl bg-gradient-to-br from-gray-800 to-gray-700 flex items-center justify-center overflow-hidden shadow-inner relative'>
+                                {remoteStream ? <video
+                                    autoPlay
+                                    muted
+                                    playsInline
+                                    ref={(video) => {
+                                        if (video && remoteStream) {
+                                            video.srcObject = remoteStream;
+                                        }
+                                    }}
+                                    className="w-full h-full object-cover"
+                                /> :
+                                    <div className='flex flex-col items-center gap-4'>
+                                        <div className='w-24 h-24 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center shadow-xl'>
+                                            <User className='w-12 h-12 md:w-16 md:h-16 text-gray-400' />
+                                        </div>
+                                        <div className='text-white text-lg md:text-xl font-semibold tracking-wide'>
+                                            {st === "live" && "Connected"}
+                                            {st === "receiving" && "Incoming Call"}
+                                            {st === "calling" && "Calling..."}
+                                        </div>
+                                        {st === "calling" && (
+                                            <div className='text-gray-400 text-xs md:text-sm animate-pulse'>Waiting for response</div>
+                                        )}
+                                    </div>
+                                }
                             </div>
-                            <div className='text-white text-xl font-medium'>
-                                {st === "live" && "Connected"}
-                                {st === "receiving" && "Incoming Call..."}
-                                {st === "calling" && "Calling..."}
-                            </div>
-                            {st === "calling" && (
-                                <div className='text-gray-400 text-sm'>Waiting for response</div>
-                            )}
                         </div>
                     </div>
 
                     {/* Local Video Preview (Small) */}
                     {st === "live" && (
-                        <div className='absolute top-4 right-4 w-48 h-36 bg-gray-700 rounded-lg overflow-hidden shadow-lg border-2 border-gray-600'>
+                        <div className='absolute top-2 right-2 md:top-4 md:right-4 w-28 h-20 md:w-40 md:h-28 bg-gray-800 rounded-xl md:rounded-2xl overflow-hidden shadow-2xl border-2 border-gray-600/50'>
                             <div className='w-full h-full flex items-center justify-center'>
-                                <video
+                                {myStream ? <video
                                     autoPlay
                                     muted
                                     playsInline
@@ -76,32 +79,38 @@ export default function VideoCallingModal({ st, onChangeModal, handleVideoCallRe
                                         }
                                     }}
                                     className="w-full h-full object-cover"
-                                />
-
+                                /> :
+                                    <User className='w-8 h-8 md:w-12 md:h-12 text-gray-400' />}
                             </div>
                         </div>
                     )}
 
                     {/* Call Duration (Live only) */}
                     {st === "live" && (
-                        <div className='absolute top-4 left-4 bg-black/50 px-4 py-2 rounded-full'>
-                            <span className='text-white text-sm font-medium'>00:00</span>
+                        <div className='absolute top-2 left-2 md:top-4 md:left-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 md:px-4 md:py-2 rounded-full border border-gray-700/50'>
+                            <span className='text-white text-xs md:text-sm font-semibold tracking-wider'>00:00</span>
                         </div>
                     )}
                 </div>
 
                 {/* Controls */}
-                <div className='bg-gray-900 p-6 flex items-center justify-center gap-4'>
+                <div className='bg-gradient-to-t from-gray-900 to-gray-800 p-4 md:p-6 flex items-center justify-center gap-3 md:gap-4 border-t border-gray-700/30'>
                     {st === "receiving" ? (
                         <>
                             {/* Accept Call */}
-                            <button className='w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex items-center justify-center shadow-lg  cursor-pointer' onClick={() => handleVideoCallReponse("accept")}>
-                                <Phone className='w-7 h-7 text-white' />
+                            <button
+                                className='w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-green-500/50 hover:scale-105 active:scale-95 cursor-pointer'
+                                onClick={() => handleVideoCallReponse("accept")}
+                            >
+                                <Phone className='w-6 h-6 md:w-7 md:h-7 text-white' />
                             </button>
 
                             {/* Decline Call */}
-                            <button className='w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center shadow-lg cursor-pointer' onClick={() => handleVideoCallReponse("reject")}>
-                                <PhoneOff className='w-7 h-7 text-white' />
+                            <button
+                                className='w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-red-500/50 hover:scale-105 active:scale-95 cursor-pointer'
+                                onClick={() => handleVideoCallReponse("reject")}
+                            >
+                                <PhoneOff className='w-6 h-6 md:w-7 md:h-7 text-white' />
                             </button>
                         </>
                     ) : (
@@ -109,31 +118,38 @@ export default function VideoCallingModal({ st, onChangeModal, handleVideoCallRe
                             {/* Mute Toggle */}
                             <button
                                 onClick={() => setIsMuted(!isMuted)}
-                                className={`w-14 h-14 rounded-full transition-colors flex items-center justify-center ${isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-700 hover:bg-gray-600 cursor-pointer'
+                                className={`w-8 h-8 md:w-10 md:h-10 rounded-full transition-all duration-300 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 ${isMuted
+                                    ? 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 hover:shadow-red-500/50'
+                                    : 'bg-gradient-to-br from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 cursor-pointer hover:shadow-gray-500/30'
                                     }`}
                             >
                                 {isMuted ? (
-                                    <MicOff className='w-6 h-6 text-white' />
+                                    <MicOff className='w-5 h-5 md:w-6 md:h-6 text-white' />
                                 ) : (
-                                    <Mic className='w-6 h-6 text-white' />
+                                    <Mic className='w-5 h-5 md:w-6 md:h-6 text-white' />
                                 )}
                             </button>
 
                             {/* End Call */}
-                            <button className='w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center shadow-lg cursor-pointer' onClick={() => onChangeModal("off")}>
-                                <PhoneOff className='w-7 h-7 text-white' />
+                            <button
+                                className='w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-red-500/50 hover:scale-105 active:scale-95 cursor-pointer'
+                                onClick={handleEndCall}
+                            >
+                                <PhoneOff className='w-6 h-6 md:w-7 md:h-7 text-white' />
                             </button>
 
                             {/* Video Toggle */}
                             <button
                                 onClick={() => setIsVideoOff(!isVideoOff)}
-                                className={`w-14 h-14 rounded-full transition-colors flex items-center justify-center ${isVideoOff ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-700 hover:bg-gray-600 cursor-pointer'
+                                className={`w-8 h-8 md:w-10 md:h-10 rounded-full transition-all duration-300 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 ${isVideoOff
+                                    ? 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 hover:shadow-red-500/50'
+                                    : 'bg-gradient-to-br from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 cursor-pointer hover:shadow-gray-500/30'
                                     }`}
                             >
                                 {isVideoOff ? (
-                                    <VideoOff className='w-6 h-6 text-white' />
+                                    <VideoOff className='w-5 h-5 md:w-6 md:h-6 text-white' />
                                 ) : (
-                                    <Video className='w-6 h-6 text-white' />
+                                    <Video className='w-5 h-5 md:w-6 md:h-6 text-white' />
                                 )}
                             </button>
                         </>

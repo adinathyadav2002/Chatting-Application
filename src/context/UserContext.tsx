@@ -1,4 +1,4 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useEffect, useRef, useState } from "react";
 import userServices from "../services/userServices";
 import { useSocket } from "../hooks/useSocket";
 import type { UserContextType, userDataType } from "../types/context";
@@ -17,6 +17,8 @@ export function UserContextProvider({
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [roomId, setRoomId] = useState("");
   const { socket } = useSocket();
+  const userIdRef = useRef<number | null>(null);
+  const roomIdRef = useRef<string | null>(null);
 
   const [navigateFn, setNavigateFn] = useState<((path: string) => void) | null>(
     null
@@ -44,6 +46,7 @@ export function UserContextProvider({
           avatar: user.avatar,
           socketId: socket?.id || null,
         });
+        userIdRef.current = user.id;
 
         socket?.emit("user connected", { userId: user?.id });
       } else {
@@ -66,7 +69,9 @@ export function UserContextProvider({
         setIsLoggedIn,
         setNavigateFn,
         roomId,
-        setRoomId
+        setRoomId,
+        userIdRef,
+        roomIdRef
       }}
     >
       {children}

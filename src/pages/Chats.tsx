@@ -1,34 +1,4 @@
-/*
- User A (You)                          User B (Friend)
-    |                                       |
-    | ------1. Create Offer------> -------- |
-    |                                       |
-    |< ----- 2. Send Answer------< ---------|
-    |                                       |
-    | ------3. ICE Candidates-- > ----------|  
-    |                                       |
-    |< ----- 4. ICE Candidates-- -< --------|  
-    |                                       |
-    |====== 5. Connection Established ======|
-
-
-    1. Peer A creates offer
-      ↓ (ICE candidates start generating immediately)
-    2. ICE candidates are being discovered (happening in background)
-      ↓
-    3. Offer sent to Peer B
-      ↓
-    4. Peer B receives offer, creates answer
-      ↓ (More ICE candidates generating on both sides)
-    5. Answer sent back to Peer A
-      ↓
-    6. ICE candidates continue to be exchanged
-      ↓
-    7. Connection established!
-*/
-
-
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import type { GlobalMessages, Message, PrivateMessage } from "../types";
 import type { User } from "../types/user";
 import MessageList from "../components/MessageList";
@@ -54,23 +24,26 @@ const Home: React.FC = () => {
       unreadCount: number;
     }>
   >([]);
+  const navigate = useNavigate();
+  const [myStream, setMyStream] = useState<MediaStream | null>(null);
   const [videoModal, setVideoModal] = useState<"receiving" | "off" | "calling" | "live">("off");
-  const { peer, createOffer, createAnswer } = usePeerContext();
-
+  const offerRef = useRef<RTCSessionDescriptionInit | null>(null);
 
   // WhatsApp-like state management
   const [activeChat, setActiveChat] = useState<"global" | User>("global");
   const [users, setUsers] = useState<User[]>([]);
 
-  const { userdata, isLoggedIn, handleUpdateUser, setIsLoggedIn, roomId, setRoomId } =
+  const { peer, createOffer, createAnswer, sendStream, addIceCandidate, remoteStream } = usePeerContext();
+  const { userdata, isLoggedIn, handleUpdateUser, setIsLoggedIn, roomId, setRoomId, roomIdRef } =
     useUserContext();
   const { socket, isConnected } = useSocket();
-  const navigate = useNavigate();
-  const offerRef = useRef<RTCSessionDescriptionInit | null>(null);
+
 
   useEffect(() => {
     if (!socket) return;
+
     socket.on("want to video call", (roomId, offer) => {
+      if (roomIdRef) roomIdRef.current = roomId
       offerRef.current = offer;
       setVideoModal("receiving");
       console.log(`room Id set to ${roomId}`);
@@ -84,15 +57,12 @@ const Home: React.FC = () => {
 
 
   useEffect(() => {
-
     if (!socket) return;
 
     //  Receive ICE candidates from the OTHER peer
     socket.on("ice-candidate", async (data: { candidate: RTCIceCandidateInit }) => {
       try {
-        console.log("Received ICE candidate from remote peer");
-        // 4. Add the OTHER peer's candidate to YOUR peer connection
-        await peer.addIceCandidate(new RTCIceCandidate(data.candidate));
+        addIceCandidate(data.candidate);
       } catch (error) {
         console.error("Error adding ICE candidate:", error);
       }
@@ -155,7 +125,7 @@ const Home: React.FC = () => {
   useEffect(() => {
     if (!socket) return;
     socket.on("online-users", (onlineUsers) => {
-      console.log("Received online-users event:", onlineUsers);
+      // console.log("Received online-users event:", onlineUsers);
       setUsers((prevUsers) =>
         prevUsers.map((user) => {
           const isOnline = onlineUsers.find(
@@ -198,7 +168,7 @@ const Home: React.FC = () => {
         content: string;
         createdAt: string;
       }) => {
-        console.log(messageData, "Received global message data");
+        // console.log(messageData, "Received global message data");
         const newMessage: any = {
           id: Date.now().toString(),
           userId: (messageData.senderId || "unknown").toString(),
@@ -274,7 +244,6 @@ const Home: React.FC = () => {
     return () => {
       socket.off("Global message");
       socket.off("Private message");
-      socket.off("want to video  call");
     };
   }, [socket, isLoggedIn, navigate, userdata.id, users]);
 
@@ -289,7 +258,8 @@ const Home: React.FC = () => {
     }
 
     if (response == "accept") {
-      console.log("receive video call 3333");
+
+      if (myStream) sendStream(myStream);
       const ans = await createAnswer(offerRef.current);
       socket.emit("received video call", userdata.id, roomId, ans);
       setVideoModal("live");
@@ -359,15 +329,44 @@ const Home: React.FC = () => {
     }
   };
 
+  const getUserMediaStream = useCallback(async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+    setMyStream(stream);
+  }, []);
+
+  useEffect(() => {
+
+    getUserMediaStream();
+  }, [getUserMediaStream])
+
   const handleVideoCall = async (receiverId: number | undefined) => {
-    // open  modal of calling
+
+
     setVideoModal(() => "calling");
 
-    const offer = await createOffer();
+    // Generate roomId FIRST and set it BEFORE creating offer
+    const newRoomId = `room-${userdata.id}-${receiverId}-${Date.now()}`;
+    console.log("🎬 Setting roomId:", newRoomId);
 
-    // send message to receiver through socket
-    socket?.emit("initiate video call", receiverId, userdata.id, offer);
+    // Set roomId synchronously so it's available for the ICE handler
+    setRoomId(newRoomId);
+    if (roomIdRef) roomIdRef.current = newRoomId;
 
+    // Wait for next tick to ensure state is updated
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    try {
+      if (myStream) {
+        console.log("Adding local stream before creating offer");
+        await sendStream(myStream);
+      }
+
+      const offer = await createOffer();
+
+      socket?.emit("initiate video call", receiverId, userdata.id, offer, newRoomId);
+    } catch (error) {
+      console.error("🎬 Error in handleVideoCall:", error);
+    }
   }
 
   const handleRoomIdChange = (roomId: string) => {
@@ -405,7 +404,6 @@ const Home: React.FC = () => {
 
   // Get chat header info
   const getChatHeader = () => {
-    console.log(activeChat);
     if (activeChat === "global") {
       return {
         title: "Global Chat",
@@ -424,12 +422,40 @@ const Home: React.FC = () => {
     setVideoModal(() => modal);
   }
 
+  const handleEndCall = () => {
+    // Stop local media
+    if (myStream) {
+      myStream.getTracks().forEach(track => track.stop());
+    }
+
+    // Stop remote media
+    if (remoteStream) {
+      remoteStream.getTracks().forEach(track => track.stop());
+    }
+
+    // Close peer connection
+    if (peer && peer.connectionState !== "closed") {
+      peer.onicecandidate = null;
+      peer.ontrack = null;
+      peer.close();
+    }
+
+    // Reset refs
+    if (roomIdRef)
+      roomIdRef.current = null;
+    offerRef.current = null;
+
+    // Reset UI state
+    setVideoModal("off");
+  }
+
+
   const headerInfo = getChatHeader();
 
   return (
     <div className="min-h-screen bg-gray-100">
       {/* // Video  Calling Modal */}
-      {videoModal != "off" && <VideoCallingModal st={videoModal} onChangeModal={handleChangeModal} handleVideoCallReponse={handleVideoCallReponse} />}
+      {videoModal != "off" && <VideoCallingModal st={videoModal} onChangeModal={handleChangeModal} handleVideoCallReponse={handleVideoCallReponse} myStream={myStream} handleEndCall={handleEndCall} />}
 
       <div className="flex h-screen w-full bg-gray-100">
         {/* Left Sidebar - Conversations */}

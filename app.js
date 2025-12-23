@@ -26,12 +26,14 @@ app.use(express.json());
 app.use(cookieParser()); // Middleware to parse cookies
 app.use(morgan("dev")); // HTTP request logger
 
+const activeCalls = new Map();
+
 const io = new SocketIOServer(server, {
   cors: {
     // set two origins for CORS
     origin: [
       "http://localhost:5173", // Vite default
-      "http://192.168.1.9:5173", // Network IP
+      "http://192.168.31.191:5173", // Network IP
       "http://13.233.154.37:5173",
       "http://chat.adinathyadav.xyz",
       "https://chat.adinathyadav.xyz", // ec2
@@ -43,41 +45,46 @@ const io = new SocketIOServer(server, {
 io.on("connection", (socket) => {
   console.log("New socket connected:", socket.id);
 
-  socket.on("initiate video call", async (receiverId, callerId, offer) => {
-    if (!receiverId) {
-      console.log("Receiver not  found");
-      return;
+  socket.on(
+    "initiate video call",
+    async (receiverId, callerId, offer, roomId) => {
+      if (!receiverId) {
+        console.log("Receiver not  found");
+        return;
+      }
+
+      // find the socket id of receiver with email
+      try {
+        const [sender, receiver] = await Promise.all([
+          prisma.user.findUnique({
+            where: { id: callerId },
+          }),
+          prisma.user.findUnique({
+            where: { id: receiverId },
+          }),
+        ]);
+        activeCalls.set(roomId, {
+          callerSocketId: sender.socketId,
+          receiverSocketId: receiver.socketId,
+        });
+
+        await prisma.messages.create({
+          data: {
+            content: "video Call",
+            senderId: parseInt(callerId),
+            receiverId: parseInt(receiverId),
+            roomId: roomId,
+            isGlobal: false,
+          },
+        });
+
+        io.to(receiver.socketId).emit("want to video call", roomId, offer);
+      } catch (err) {
+        console.log(err);
+        console.log(`Error calling ${receiverId}`);
+      }
     }
-
-    // find the socket id of receiver with email
-    try {
-      const [sender, receiver] = await Promise.all([
-        prisma.user.findUnique({
-          where: { id: callerId },
-        }),
-        prisma.user.findUnique({
-          where: { id: receiverId },
-        }),
-      ]);
-
-      const roomId = crypto.randomBytes(8).toString("hex");
-
-      await prisma.messages.create({
-        data: {
-          content: "video Call",
-          senderId: parseInt(callerId),
-          receiverId: parseInt(receiverId),
-          roomId,
-          isGlobal: false,
-        },
-      });
-
-      io.to(receiver.socketId).emit("want to video call", roomId, offer);
-    } catch (err) {
-      console.log(err);
-      console.log(`Error calling ${receiverId}`);
-    }
-  });
+  );
 
   socket.on("received video call", async (receiverId, roomId, ans) => {
     console.log("receiver call");
@@ -268,23 +275,17 @@ io.on("connection", (socket) => {
   });
 
   socket.on("ice-candidate", async (data) => {
-    const message = await prisma.messages.findUnique({
-      where: { roomId: data.roomId },
-      include: {
-        sender: true,
-        receiver: true,
-      },
+    const call = activeCalls.get(data.roomId);
+    if (!call) return;
+
+    const targetSocketId =
+      socket.id === call.callerSocketId
+        ? call.receiverSocketId
+        : call.callerSocketId;
+
+    socket.to(targetSocketId).emit("ice-candidate", {
+      candidate: data.candidate,
     });
-    // Send this candidate to the other user in the room
-    if (data.userId == message.receiver.id) {
-      socket.to(message.sender.socketId).emit("ice-candidate", {
-        candidate: data.candidate,
-      });
-    } else {
-      socket.to(message.receiver.socketId).emit("ice-candidate", {
-        candidate: data.candidate,
-      });
-    }
   });
 
   socket.on("disconnect", async () => {
@@ -321,7 +322,7 @@ io.on("connection", (socket) => {
 const allowedOrigins = [
   "http://127.0.0.1:5173",
   "http://localhost:5173",
-  "http://192.168.1.9:5173",
+  "http://192.168.31.191:5173",
   "http://13.233.154.37:5173",
   "http://chat.adinathyadav.xyz",
   "https://chat.adinathyadav.xyz", // ec2
@@ -343,17 +344,16 @@ app.use(
 );
 
 const port = process.env.VITE_SERVER_PORT || 4000;
-server.listen(port, () => {
-  // logout all the users when the server starts
-  prisma.user
-    .updateMany({
+server.listen(port, "0.0.0.0", async () => {
+  try {
+    await prisma.user.updateMany({
       where: { isOnline: true, socketId: { not: null } },
       data: { isOnline: false, socketId: null },
-    })
-    .then(() => {})
-    .catch((err) => {
-      console.error("Error logging out users on server start:", err);
     });
+    console.log("Users logged out on server start");
+  } catch (err) {
+    console.error("Startup logout error:", err);
+  }
 });
 
 app.use("/user", userRouter);
