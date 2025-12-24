@@ -1,5 +1,4 @@
 import dotenv from "dotenv";
-
 import express from "express";
 import { Server as SocketIOServer } from "socket.io";
 import { fileURLToPath } from "url";
@@ -8,7 +7,6 @@ import http from "http";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import morgan from "morgan";
-import crypto from "crypto";
 import { prisma } from "./db.js";
 
 import userRouter from "./routes/userRoutes.js";
@@ -32,11 +30,8 @@ const io = new SocketIOServer(server, {
   cors: {
     // set two origins for CORS
     origin: [
-      "http://localhost:5173", // Vite default
-      "http://192.168.31.191:5173", // Network IP
-      "http://13.233.154.37:5173",
-      "http://chat.adinathyadav.xyz",
-      "https://chat.adinathyadav.xyz", // ec2
+      process.env.LOCAL_IP_FRONTEND, // Vite default
+      process.env.NETWORK_IP_FRONTEND,
     ],
     methods: ["GET", "POST"],
   },
@@ -115,12 +110,25 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("ended call", async (roomId) => {
+    const call = activeCalls.get(roomId);
+    if (!call) return;
+
+    const targetSocketId =
+      socket.id === call.callerSocketId
+        ? call.receiverSocketId
+        : call.callerSocketId;
+
+    socket.to(targetSocketId).emit("ended call");
+  });
+
   socket.on("rejected video call", async (receiverId, roomId) => {
-    console.log("receiverd call");
     try {
       const message = await prisma.messages.findUnique({
         where: { roomId },
       });
+
+      // remove the roomId from active
 
       if (!message) {
         console.log("Invalid roomId:", roomId);
@@ -320,12 +328,8 @@ io.on("connection", (socket) => {
 });
 
 const allowedOrigins = [
-  "http://127.0.0.1:5173",
-  "http://localhost:5173",
-  "http://192.168.31.191:5173",
-  "http://13.233.154.37:5173",
-  "http://chat.adinathyadav.xyz",
-  "https://chat.adinathyadav.xyz", // ec2
+  process.env.NETWORK_IP_FRONTEND,
+  process.env.LOCAL_IP_FRONTEND,
 ];
 
 // set origin for CORS

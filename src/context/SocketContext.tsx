@@ -3,7 +3,6 @@ import { io, Socket } from "socket.io-client";
 import { type SocketContextType } from "../types/context";
 import { createContext } from "react";
 
-
 interface SocketProviderProps {
   children: React.ReactNode;
 }
@@ -22,7 +21,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // Connect to the server
-    const newSocket = io("http://192.168.31.191:4000");
+    const newSocket = io(import.meta.env.VITE_API_URL);
 
     newSocket.on("connect", () => {
       setIsConnected(true);

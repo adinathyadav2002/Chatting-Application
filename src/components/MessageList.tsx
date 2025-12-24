@@ -46,7 +46,7 @@ const MessageList: React.FC<MessageListProps> = ({
               }`}
           >
             <div
-              className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-lg transition-all duration-200 hover:shadow-xl ${isOwnMessage
+              className={`max-w-xs relative lg:max-w-md min-w-24 pr-5 pl-3 py-1 pb-4 rounded-2xl shadow-lg transition-all duration-200 hover:shadow-xl ${isOwnMessage
                 ? "bg-gradient-to-r from-white to-gray-200 text-black rounded-br-md"
                 : "bg-gradient-to-br from-gray-800 to-gray-900 text-white rounded-bl-md border border-white/10"
                 }`}
@@ -54,7 +54,7 @@ const MessageList: React.FC<MessageListProps> = ({
               <div className="text-sm leading-relaxed">{message?.content}</div>
               <div className="flex flex-row">
                 <div
-                  className={`text-xs mt-2 ${isOwnMessage ? "text-gray-600" : "text-gray-400"
+                  className={`text-xs z-5 absolute  right-1 bottom-0.5  ${isOwnMessage ? "text-gray-600" : "text-gray-400"
                     }`}
                 >
                   {formatTime(message?.timestamp)}

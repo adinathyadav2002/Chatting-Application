@@ -32,7 +32,7 @@ const Home: React.FC = () => {
   const [activeChat, setActiveChat] = useState<"global" | User>("global");
   const [users, setUsers] = useState<User[]>([]);
 
-  const { peer, createOffer, createAnswer, sendStream, addIceCandidate, remoteStream } = usePeerContext();
+  const { peer, createOffer, createAnswer, sendStream, addIceCandidate, remoteStream, assignNewPeer } = usePeerContext();
   const { userdata, isLoggedIn, handleUpdateUser, setIsLoggedIn, roomId, setRoomId, roomIdRef } =
     useUserContext();
   const { socket, isConnected } = useSocket();
@@ -352,6 +352,7 @@ const Home: React.FC = () => {
 
   const getCurrentMessages = () => {
     if (activeChat === "global") {
+      console.log(messages);
       return messages;
     } else {
       return privateMessages
@@ -411,12 +412,28 @@ const Home: React.FC = () => {
       peer.close();
     }
 
+    assignNewPeer();
+
+    //  end call for other peer
+    if (socket) socket.emit("ended call", roomIdRef?.current)
+
     if (roomIdRef)
       roomIdRef.current = null;
     offerRef.current = null;
 
     setVideoModal("off");
   }
+
+  useEffect(() => {
+    if (!socket) return;
+    socket.on("ended call", () => {
+      handleEndCall();
+    });
+
+    return () => {
+      socket.off("ended call");
+    };
+  }, [socket]);
 
   const headerInfo = getChatHeader();
 

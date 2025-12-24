@@ -1,18 +1,19 @@
-import { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useEffect, useRef, useState } from "react";
 import { useSocket } from "../hooks/useSocket";
 import { useUserContext } from "../hooks/useUser";
 
 type PeerContextType = {
-    peer: RTCPeerConnection;
-    createOffer: () => Promise<RTCSessionDescriptionInit>;
+    peer: RTCPeerConnection | null;
+    createOffer: () => Promise<RTCSessionDescriptionInit | undefined>;
     createAnswer: (
         offer: RTCSessionDescriptionInit
-    ) => Promise<RTCSessionDescriptionInit>;
+    ) => Promise<RTCSessionDescriptionInit | undefined>;
     setRemoteAns: (ans: RTCSessionDescriptionInit) => Promise<void>;
     addIceCandidate: (candidate: RTCIceCandidateInit) => Promise<void>;
     sendStream: (stream: MediaStream) => Promise<void>;
     handleRemoteStream: (stream: MediaStream | null) => Promise<void>;
     remoteStream: MediaStream | null;
+    assignNewPeer: () => void;
 };
 
 export const PeerContext = createContext<PeerContextType | null>(null);
@@ -21,44 +22,66 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const { socketRef } = useSocket();
     const { userIdRef, roomIdRef } = useUserContext();
+    const peerRef = useRef<RTCPeerConnection | null>(null);
+
 
     const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]).current;
 
     // Create peer connection once
-    const peer = useMemo(() => {
-        const peerConnection = new RTCPeerConnection({
+    const createPeer = () => {
+        const pc = new RTCPeerConnection({
             iceServers: [
                 { urls: "stun:stun.l.google.com:19302" },
                 { urls: "stun:stun1.l.google.com:19302" }
             ]
         });
 
-        peerConnection.onconnectionstatechange = () => {
-            console.log("->>>>>>>>>>>>>>>>>>>>>>>>>>connection state" + peerConnection.connectionState);
-        }
+        pc.onconnectionstatechange = () => {
+            console.log("Connection state:", pc.connectionState);
+        };
 
-        peerConnection.onicecandidate = (event) => {
-            if (event.candidate) {
-                if (socketRef?.current && userIdRef?.current && roomIdRef?.current) {
-                    socketRef.current.emit("ice-candidate", {
-                        roomId: roomIdRef?.current,
-                        userId: userIdRef.current,
-                        candidate: event.candidate.toJSON()
-                    });
-                } else {
-                    console.warn("⚠️ Cannot send ICE candidate - missing context:", {
-                        hasSocket: !!socketRef?.current,
-                        userId: socketRef?.current || "null",
-                        roomId: roomIdRef?.current,
-                    });
-                }
-            } else {
-                console.log(`🧊 ICE gathering complete (null candidate received) ${userIdRef?.current}`);
+        pc.onicecandidate = (event) => {
+            if (socketRef && event.candidate && socketRef.current) {
+                socketRef.current.emit("ice-candidate", {
+                    roomId: roomIdRef?.current,
+                    userId: userIdRef?.current,
+                    candidate: event.candidate.toJSON()
+                });
             }
         };
 
-        return peerConnection;
+        pc.ontrack = (ev) => {
+            if (ev.streams[0]) {
+                setRemoteStream(ev.streams[0]);
+            }
+        };
+
+        return pc;
+    };
+
+    useEffect(() => {
+        peerRef.current = createPeer();
+
+        return () => {
+            peerRef.current?.close();
+            peerRef.current = null;
+        };
     }, []);
+
+
+
+
+
+    const assignNewPeer = () => {
+        if (peerRef.current) {
+            peerRef.current.ontrack = null;
+            peerRef.current.onicecandidate = null;
+            peerRef.current.close();
+        }
+
+        peerRef.current = createPeer();
+        setRemoteStream(null);
+    };
 
     const handleRemoteStream = async (stream: MediaStream | null) => {
         setRemoteStream(stream);
@@ -77,15 +100,15 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Handle track events
     useEffect(() => {
-        if (!peer) return;
+        if (!peerRef.current) return;
         console.log("event added for track");
-        peer.addEventListener('track', handleTrackEvent);
+        peerRef.current.addEventListener('track', handleTrackEvent);
 
         return () => {
             console.log("event cleaned");
-            peer.removeEventListener('track', handleTrackEvent);
+            if (peerRef.current) peerRef.current.removeEventListener('track', handleTrackEvent);
         };
-    }, [peer, handleTrackEvent]);
+    }, [peerRef.current, handleTrackEvent]);
 
 
     // Send media stream to peer
@@ -93,16 +116,15 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
         const tracks = stream.getTracks();
         for (const track of tracks) {
             console.log(`➕ Adding ${track.kind} track to peer connection`);
-            peer.addTrack(track, stream);
+            if (peerRef.current) peerRef.current.addTrack(track, stream);
         }
-        console.log("✅ All tracks added to peer connection");
     };
 
     // Create offer
-    const createOffer = async (): Promise<RTCSessionDescriptionInit> => {
-        const offer = await peer.createOffer();
+    const createOffer = async (): Promise<RTCSessionDescriptionInit | undefined> => {
+        const offer = await peerRef.current?.createOffer();
 
-        await peer.setLocalDescription(offer);
+        await peerRef.current?.setLocalDescription(offer);
         // ICE candidates will now start generating and trigger onicecandidate
 
         return offer;
@@ -111,8 +133,10 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
     // Create answer
     const createAnswer = async (
         offer: RTCSessionDescriptionInit
-    ): Promise<RTCSessionDescriptionInit> => {
-        await peer.setRemoteDescription(offer);
+    ): Promise<RTCSessionDescriptionInit | undefined> => {
+        if (peerRef.current)
+            await peerRef.current.setRemoteDescription(offer);
+
 
         while (iceCandidateQueue.length > 0) {
             const candidate = iceCandidateQueue.shift();
@@ -120,16 +144,16 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
                 await addIceCandidate(new RTCIceCandidate(candidate));
             }
         }
+        const answer = await peerRef.current?.createAnswer();
+        await peerRef.current?.setLocalDescription(answer);
 
-        const answer = await peer.createAnswer();
-        await peer.setLocalDescription(answer);
 
         return answer;
     };
 
     // Set remote answer
     const setRemoteAns = async (ans: RTCSessionDescriptionInit) => {
-        await peer.setRemoteDescription(ans);
+        await peerRef.current?.setRemoteDescription(ans);
 
         while (iceCandidateQueue.length > 0) {
             console.log('length  not zero');
@@ -143,10 +167,12 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
     // Add ICE candidate
     const addIceCandidate = async (candidate: RTCIceCandidateInit) => {
         try {
-            if (peer.remoteDescription) {
-                await peer.addIceCandidate(new RTCIceCandidate(candidate));
+            if (peerRef.current?.remoteDescription) {
+                await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
             } else {
                 iceCandidateQueue.push(candidate);
+                console.log("✅ Ice candidate  added to queue");
+
             }
         } catch (error) {
             console.error("❌ Error adding ICE candidate:", error);
@@ -156,14 +182,15 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
     return (
         <PeerContext.Provider
             value={{
-                peer,
+                peer: peerRef.current,
                 createOffer,
                 createAnswer,
                 setRemoteAns,
                 addIceCandidate,
                 sendStream,
                 handleRemoteStream,
-                remoteStream
+                remoteStream,
+                assignNewPeer
             }}
         >
             {children}

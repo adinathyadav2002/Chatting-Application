@@ -1,6 +1,7 @@
 import express from "express";
 import { protect } from "../controllers/authController.js";
 import { prisma } from "../db.js";
+import { toIST } from "../utilities/time.js";
 
 const router = express.Router();
 
@@ -21,7 +22,13 @@ router.get("/global-messages", protect, async (req, res) => {
         isGlobal: true,
       },
     });
-    res.status(200).json(messages);
+
+    const formattedMessages = messages.map((msg) => ({
+      ...msg,
+      createdAt: toIST(msg.createdAt),
+    }));
+
+    res.status(200).json(formattedMessages);
   } catch (error) {
     console.error("Error fetching global messages:", error);
     res.status(500).json({ error: "Failed to fetch messages" });
