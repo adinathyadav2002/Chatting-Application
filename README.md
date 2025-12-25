@@ -1,11 +1,12 @@
 # 💬 WebSocket Chat Application
 
-A full-stack real-time messaging platform built with **Node.js**, **React**, **TypeScript**, and **Socket.IO**. Features WhatsApp-like UI with global and private messaging capabilities.
+A full-stack real-time messaging platform built with **Node.js**, **React**, **TypeScript**, and **Socket.IO**. Features WhatsApp-like UI with global and private messaging capabilities, plus **WebRTC video calling**.
 
 ## ✨ Features
 
 - 🔐 **JWT Authentication** - Secure user registration and login
 - 💬 **Real-time Messaging** - Global and private chat functionality
+- 📹 **Video Calling** - Peer-to-peer video calls using WebRTC
 - 👥 **Online User Status** - Live user presence tracking
 - 🖼️ **Avatar System** - Default avatars with color coding
 - 🔄 **Auto-scroll** - Automatic scroll to latest messages
@@ -30,6 +31,8 @@ A full-stack real-time messaging platform built with **Node.js**, **React**, **T
 - **Tailwind CSS v4** for styling
 - **React Router** for navigation
 - **Socket.IO Client** for real-time features
+- **WebRTC** for peer-to-peer video calling
+- **React Icons** for UI icons
 
 ## 📁 Project Structure
 
@@ -50,34 +53,80 @@ websocket/
 ├── prisma/                  # Database schema and migrations
 │   └── schema.prisma        # Prisma schema
 ├── public/                  # Static assets
-│   └── vite.svg            # Vite logo
+│   ├── vite.svg            # Vite logo
+│   └── logo_bg.png         # Application logo
 └── src/                     # Frontend source code
     ├── main.tsx             # React entry point
     ├── App.tsx              # Main App component
     ├── index.css            # Global styles
     ├── types/               # TypeScript type definitions
-    │   └── index.ts
+    │   ├── index.ts         # Message types
+    │   ├── user.ts          # User types
+    │   └── context.ts       # Context types
+    ├── assets/              # Static assets
+    │   └── react.svg        # React logo
     ├── components/          # React components
     │   ├── Avatar.tsx       # Avatar component
     │   ├── ChatRoom.tsx     # Main chat interface
     │   ├── MessageList.tsx  # Message display
     │   ├── MessageInput.tsx # Message input field
     │   ├── UserList.tsx     # User listing
-    │   └── ...             # Other components
+    │   ├── UserListItem.tsx # Individual user item
+    │   ├── UserSelector.tsx # User selection component
+    │   ├── NavigationBridge.tsx        # Navigation wrapper
+    │   ├── PrivateChatSidebar.tsx     # Private chat sidebar
+    │   ├── PrivateMessageModal.tsx    # Private message modal
+    │   ├── PrivateMessagesList.tsx    # Private messages display
+    │   ├── PrivateMessagingInterface.tsx  # Private chat interface
+    │   └── VideoCallingModal.tsx      # Video call modal (WebRTC)
     ├── pages/              # Page components
     │   ├── Login.tsx       # Login page
     │   ├── Register.tsx    # Registration page
-    │   └── Home.tsx        # Home page
+    │   ├── Home.tsx        # Home page with chat
+    │   └── Chats.tsx       # Chat list page
     ├── context/            # React Context
-    │   └── UserContext.tsx # User state management
+    │   ├── UserContext.tsx # User state management
+    │   ├── SocketContext.tsx # Socket.IO context
+    │   └── PeerContext.tsx # WebRTC peer connection context
     ├── hooks/              # Custom React hooks
-    │   └── useSocket.ts    # Socket management
+    │   ├── useSocket.ts    # Socket management
+    │   ├── useUser.ts      # User data hook
+    │   └── usePeer.ts      # WebRTC peer hook
     ├── services/           # API services
-    │   ├── userServices.tsx
-    │   └── messageServices.ts
+    │   ├── userServices.tsx      # User API calls
+    │   └── messageServices.ts    # Message API calls
     └── utils/              # Utility functions
         └── avatarUtils.ts  # Avatar generation
 ```
+
+## 🎥 WebRTC Video Calling
+
+The application includes peer-to-peer video calling functionality using WebRTC:
+
+### Features
+
+- **One-to-one video calls** between users
+- **Real-time audio and video** streaming
+- **Call states**: Calling, Receiving, Live, and Ended
+- **ICE candidate exchange** for NAT traversal
+- **Offer/Answer negotiation** via Socket.IO signaling
+- **Call controls**: Accept, Reject, End call
+
+### How It Works
+
+1. User initiates a video call by clicking the video icon in a private chat
+2. WebRTC offer is created and sent via Socket.IO to the recipient
+3. Recipient receives a call notification modal
+4. Upon acceptance, WebRTC answer is created and sent back
+5. ICE candidates are exchanged to establish peer connection
+6. Video streams are established between peers
+7. Either user can end the call at any time
+
+### Components
+
+- **PeerContext.tsx**: Manages WebRTC peer connections, offers, answers, and ICE candidates
+- **VideoCallingModal.tsx**: UI component for video call interface
+- **Home.tsx**: Integrates video calling functionality into the chat interface
 
 ## 🚀 Getting Started
 
@@ -86,6 +135,7 @@ websocket/
 - **Node.js** (v18 or higher)
 - **MySQL** database
 - **npm** or **yarn**
+- **Modern web browser** with WebRTC support (Chrome, Firefox, Safari, Edge)
 
 ### Installation
 
@@ -323,12 +373,20 @@ CORS is configured to allow connections from:
 - `user disconnected` - User goes offline
 - `Global message` - Send global message
 - `Private message` - Send private message
+- `initiate video call` - Start a video call
+- `received video call` - Accept video call with answer
+- `rejected video call` - Reject incoming video call
+- `ended call` - End active video call
+- `ice-candidate` - Exchange ICE candidates for WebRTC
 
 ### Server to Client
 
 - `online-users` - Updated list of online users
 - `Global message` - New global message received
 - `Private message` - New private message received
+- `want to video call` - Incoming video call notification
+- `ice-candidate` - ICE candidate from peer
+- `ended call` - Video call ended by peer
 
 ## 🚨 Troubleshooting
 
@@ -375,7 +433,16 @@ CORS is configured to allow connections from:
    - Check browser console for WebSocket errors
    - Ensure firewall isn't blocking connections
 
-5. **Build/Dependencies issues**
+5. **Video calling issues**
+
+   - Grant camera and microphone permissions in browser
+   - Check if HTTPS is required (some browsers require secure context)
+   - Verify WebRTC is supported in your browser
+   - Check browser console for WebRTC errors
+   - Ensure both peers have stable internet connections
+   - Test with browsers on same local network first
+
+6. **Build/Dependencies issues**
 
    ```bash
    # Clear cache and reinstall
@@ -389,7 +456,7 @@ CORS is configured to allow connections from:
    npx prisma generate
    ```
 
-6. **Environment variables not loading**
+7. **Environment variables not loading**
    - Ensure `.env` file is in root directory
    - Check `.env` file syntax (no spaces around `=`)
    - Restart development server after `.env` changes
@@ -414,13 +481,38 @@ npx prisma version
 npx prisma format
 ```
 
+## 🎯 Future Enhancements
+
+- [ ] Group video calls (multi-peer)
+- [ ] Screen sharing functionality
+- [ ] File sharing in chats
+- [ ] Message reactions and emojis
+- [ ] Voice messages
+- [ ] Push notifications
+- [ ] End-to-end encryption
+- [ ] Message search functionality
+- [ ] User profiles and settings
+- [ ] Dark/Light theme toggle
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-##
+## 🙏 Acknowledgments
 
 - [Socket.IO](https://socket.io/) for real-time communication
 - [Prisma](https://www.prisma.io/) for database management
 - [Tailwind CSS](https://tailwindcss.com/) for styling
 - [Vite](https://vitejs.dev/) for fast development experience
+- [WebRTC](https://webrtc.org/) for peer-to-peer video calling
+- [React Icons](https://react-icons.github.io/react-icons/) for UI icons
+
+## 👨‍💻 Author
+
+**Adinath Yadav**
+
+- GitHub: [@adinathyadav2002](https://github.com/adinathyadav2002)
+
+---
+
+⭐ If you find this project useful, please consider giving it a star on GitHub!
