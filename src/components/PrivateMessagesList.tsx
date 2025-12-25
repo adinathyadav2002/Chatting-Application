@@ -40,7 +40,7 @@ const PrivateMessagesList: React.FC<PrivateMessagesListProps> = ({
       {/* Toggle Button */}
       <button
         onClick={onToggle}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40 hover:scale-110"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-linear-to-r from-purple-500 to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40 hover:scale-110"
       >
         <span className="text-xl">💬</span>
         {conversations.some((c) => c.unreadCount > 0) && (
@@ -54,7 +54,7 @@ const PrivateMessagesList: React.FC<PrivateMessagesListProps> = ({
       {isVisible && (
         <div className="fixed bottom-24 right-6 w-80 max-h-96 bg-white rounded-2xl shadow-2xl border border-gray-200 z-40 flex flex-col">
           {/* Header */}
-          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-t-2xl">
+          <div className="p-4 border-b border-gray-200 bg-linear-to-r from-purple-500 to-blue-600 text-white rounded-t-2xl">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold">Private Messages</h3>
               <button

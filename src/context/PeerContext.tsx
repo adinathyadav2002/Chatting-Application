@@ -74,6 +74,8 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         peerRef.current = createPeer();
+        console.log("new peer created");
+        console.log(peerRef.current);
         setRemoteStream(null);
     };
 

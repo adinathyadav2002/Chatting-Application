@@ -43,7 +43,7 @@ const PrivateChatSidebar: React.FC<PrivateChatSidebarProps> = ({
         }`}
     >
       {/* Header */}
-      <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-500 to-blue-600 text-white">
+      <div className="p-6 border-b border-gray-200 bg-linear-to-r from-purple-500 to-blue-600 text-white">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold">Private Chats</h2>

@@ -71,18 +71,28 @@ export default function VideoCallingModal({ st, onChangeModal, handleVideoCallRe
 
     // Set local video stream (only once when myStream changes)
     useEffect(() => {
-        if (localVideoRef.current && myStream) {
-            localVideoRef.current.srcObject = myStream;
-        } else {
-            console.log("mystream not found");
-        }
+        if (!myStream || (st !== "live" && st != "calling")) return;
 
+        if (localVideoRef.current) {
+            localVideoRef.current.srcObject = myStream;
+        }
+    }, [myStream, st]);
+
+    useEffect(() => {
+        if (myStream) {
+            console.log("Local tracks:", myStream.getTracks());
+        }
     }, [myStream]);
+
+
+
 
     // Set remote video stream (only once when remoteStream changes)
     useEffect(() => {
         if (remoteVideoRef.current && remoteStream) {
             remoteVideoRef.current.srcObject = remoteStream;
+        } else {
+            console.log(`mystream not found ${remoteVideoRef.current} mystream  ${remoteStream}`);
         }
     }, [remoteStream]);
 
@@ -130,25 +140,15 @@ export default function VideoCallingModal({ st, onChangeModal, handleVideoCallRe
                                         <div className='w-24 h-24 md:w-32 md:h-32 rounded-full bg-linear-to-br from-gray-800 to-gray-900 flex items-center justify-center shadow-xl border-2 border-white/10'>
                                             <User className='w-12 h-12 md:w-16 md:h-16 text-gray-400' />
                                         </div>
-                                        <div className='text-white text-lg md:text-xl font-semibold tracking-wide'>
+                                        <div className='text-white text-lg md:text-xl font-semibold tracking-wide  p-4'>
                                             {st === "live" && "Connected"}
                                             {st === "receiving" && <div>
-                                                {myStream && !isVideoOff ? (
-                                                    <video
-                                                        ref={localVideoRef}
-                                                        autoPlay
-                                                        muted
-                                                        playsInline
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <User className='w-8 h-8 md:w-12 md:h-12 text-gray-400' />
-                                                )}
+                                                receiving
                                             </div>}
                                             {st === "calling" && "Calling..."}
                                         </div>
                                         {st === "calling" && (
-                                            <div className='text-gray-400 text-xs md:text-sm'>
+                                            <div className='text-gray-400 text-xs md:text-sm w-64'>
                                                 <div>
                                                     {myStream && !isVideoOff ? (
                                                         <video
@@ -182,6 +182,7 @@ export default function VideoCallingModal({ st, onChangeModal, handleVideoCallRe
                                         playsInline
                                         className="w-full h-full object-cover"
                                     />
+
                                 ) : (
                                     <User className='w-8 h-8 md:w-12 md:h-12 text-gray-400' />
                                 )}

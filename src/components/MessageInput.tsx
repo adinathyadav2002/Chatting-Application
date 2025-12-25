@@ -44,7 +44,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         <button
           type="submit"
           disabled={!message.trim() || disabled}
-          className="px-8 py-3 bg-gradient-to-r from-white to-gray-300 text-black rounded-full hover:from-gray-100 hover:to-gray-200 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-black disabled:from-gray-700 disabled:to-gray-800 disabled:cursor-not-allowed disabled:text-gray-500 transition-all duration-200 font-semibold shadow-sm hover:shadow-md"
+          className="px-8 py-3 bg-linear-to-r from-white to-gray-300 text-black rounded-full hover:from-gray-100 hover:to-gray-200 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-black disabled:from-gray-700 disabled:to-gray-800 disabled:cursor-not-allowed disabled:text-gray-500 transition-all duration-200 font-semibold shadow-sm hover:shadow-md"
         >
           Send
         </button>

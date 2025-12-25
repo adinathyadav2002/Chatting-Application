@@ -60,7 +60,7 @@ const PrivateMessageModal: React.FC<PrivateMessageModalProps> = ({
       {/* Modal */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[600px] mx-4 flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-2xl">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-linear-to-r from-blue-500 to-purple-600 text-white rounded-t-2xl">
           {" "}
           <div className="flex items-center gap-3">
             <Avatar
@@ -85,7 +85,7 @@ const PrivateMessageModal: React.FC<PrivateMessageModalProps> = ({
           </button>
         </div>
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-50 to-white">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-linear-to-b from-gray-50 to-white">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-500">
               <span className="text-4xl mb-2">💬</span>
@@ -104,8 +104,8 @@ const PrivateMessageModal: React.FC<PrivateMessageModalProps> = ({
                 >
                   <div
                     className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm transition-all duration-200 ${isOwnMessage
-                        ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-md"
-                        : "bg-white text-gray-800 rounded-bl-md border border-gray-100"
+                      ? "bg-linear-to-r from-blue-500 to-blue-600 text-white rounded-br-md"
+                      : "bg-white text-gray-800 rounded-bl-md border border-gray-100"
                       }`}
                   >
                     <div className="text-sm leading-relaxed">

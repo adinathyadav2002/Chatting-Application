@@ -90,7 +90,7 @@ const PrivateMessagingInterface: React.FC<PrivateMessagingInterfaceProps> = ({
       {/* Floating Action Button */}
       <button
         onClick={() => setIsSidebarVisible(!isSidebarVisible)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-30 hover:scale-110"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-linear-to-r from-purple-500 to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-30 hover:scale-110"
       >
         <span className="text-xl">💬</span>
         {totalUnreadCount > 0 && (

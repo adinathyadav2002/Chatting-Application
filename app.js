@@ -63,7 +63,7 @@ io.on("connection", (socket) => {
           receiverSocketId: receiver.socketId,
         });
 
-        await prisma.messages.create({
+        const message = await prisma.messages.create({
           data: {
             content: "video Call",
             senderId: parseInt(callerId),
@@ -111,36 +111,84 @@ io.on("connection", (socket) => {
   });
 
   socket.on("ended call", async (roomId) => {
-    const call = activeCalls.get(roomId);
-    if (!call) return;
+    try {
+      const call = activeCalls.get(roomId);
+      if (!call) return;
 
-    const targetSocketId =
-      socket.id === call.callerSocketId
-        ? call.receiverSocketId
-        : call.callerSocketId;
+      const message = await prisma.messages.findUnique({
+        where: { roomId },
+        include: {
+          receiver: true,
+          sender: true,
+        },
+      });
 
-    socket.to(targetSocketId).emit("ended call");
+      const targetSocketId =
+        socket.id === call.callerSocketId
+          ? call.receiverSocketId
+          : call.callerSocketId;
+
+      socket.to(targetSocketId).emit("ended call");
+
+      // Emit to receiver if they're online
+      if (call.receiverSocketId) {
+        io.to(call.receiverSocketId).emit("Private message", message);
+      }
+
+      // Emit to sender as well (confirmation that message was sent)
+      if (call.callerSocketId) {
+        io.to(call.callerSocketId).emit("Private message", message);
+      }
+
+      // delete the room info from map
+      if (activeCalls.has(roomId)) {
+        activeCalls.delete(roomId);
+      }
+    } catch (err) {
+      console.error("Error while ending call:", err);
+    }
   });
 
   socket.on("rejected video call", async (receiverId, roomId) => {
     try {
+      const call = activeCalls.get(roomId);
+      if (!call) return;
+
       const message = await prisma.messages.findUnique({
         where: { roomId },
+        include: {
+          receiver: true,
+          sender: true,
+        },
       });
 
       // remove the roomId from active
-
       if (!message) {
         console.log("Invalid roomId:", roomId);
         return;
       }
 
-      await prisma.messages.update({
+      const updatedMessage = await prisma.messages.update({
         where: { roomId },
         data: { isRead: false },
       });
+
+      // Emit to receiver if they're online
+      if (call.receiverSocketId) {
+        io.to(call.receiverSocketId).emit("Private message", updatedMessage);
+      }
+
+      // Emit to sender as well (confirmation that message was sent)
+      if (call.callerSocketId) {
+        io.to(call.callerSocketId).emit("Private message", updatedMessage);
+      }
+
+      // delete the room info from map
+      if (activeCalls.has(roomId)) {
+        activeCalls.delete(roomId);
+      }
     } catch (err) {
-      console.error("Error while receiving call:", err);
+      console.error("Error while rejecting call:", err);
     }
   });
 

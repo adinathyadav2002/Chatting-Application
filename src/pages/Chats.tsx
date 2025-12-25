@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { GlobalMessages, Message, PrivateMessage } from "../types";
 import type { User } from "../types/user";
 import MessageList from "../components/MessageList";
@@ -31,7 +31,7 @@ const Home: React.FC = () => {
   const [activeChat, setActiveChat] = useState<"global" | User>("global");
   const [users, setUsers] = useState<User[]>([]);
 
-  const { peer, createOffer, createAnswer, sendStream, addIceCandidate, remoteStream, assignNewPeer } = usePeerContext();
+  const { createOffer, createAnswer, sendStream, addIceCandidate, remoteStream, assignNewPeer } = usePeerContext();
   const { userdata, isLoggedIn, handleUpdateUser, setIsLoggedIn, roomId, setRoomId, roomIdRef } =
     useUserContext();
   const { socket, isConnected } = useSocket();
@@ -60,10 +60,10 @@ const Home: React.FC = () => {
       if (roomIdRef) roomIdRef.current = roomId
 
       await getUserMediaStream();
+
       offerRef.current = offer;
-      setVideoModal("receiving");
-      console.log(`room Id set to ${roomId}`);
       setRoomId(roomId);
+      setVideoModal("receiving");
     });
     return () => {
       socket.off("want to video call");
@@ -335,7 +335,6 @@ const Home: React.FC = () => {
   const handleVideoCall = async (receiverId: number | undefined) => {
     try {
       const stream = await getUserMediaStream();
-      setVideoModal(() => "calling");
 
       const newRoomId = `room-${userdata.id}-${receiverId}-${Date.now()}`;
 
@@ -347,6 +346,7 @@ const Home: React.FC = () => {
       const offer = await createOffer();
 
       socket?.emit("initiate video call", receiverId, userdata.id, offer, newRoomId);
+      setVideoModal(() => "calling");
     } catch (error) {
       console.error("🎬 Error in handleVideoCall:", error);
     }
@@ -409,12 +409,6 @@ const Home: React.FC = () => {
       remoteStream.getTracks().forEach(track => track.stop());
     }
 
-    if (peer && peer.connectionState !== "closed") {
-      peer.onicecandidate = null;
-      peer.ontrack = null;
-      peer.close();
-    }
-
     assignNewPeer();
 
     //  end call for other peer
@@ -441,22 +435,22 @@ const Home: React.FC = () => {
   const headerInfo = getChatHeader();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
+    <div className="min-h-screen bg-linear-to-br from-gray-900 via-black to-gray-900">
       {videoModal != "off" && <VideoCallingModal st={videoModal} onChangeModal={handleChangeModal} handleVideoCallReponse={handleVideoCallReponse} myStream={myStream} handleEndCall={handleEndCall} />}
 
-      <div className="flex h-screen w-full bg-gradient-to-br from-gray-900 via-black to-gray-900">
+      <div className="flex h-screen w-full bg-linear-to-br from-gray-900 via-black to-gray-900">
         {/* Left Sidebar - Conversations */}
-        <div className="w-80 bg-gradient-to-b from-gray-900 to-black border-r border-white/10 flex flex-col">
+        <div className="w-80 bg-linear-to-b from-gray-900 to-black border-r border-white/10 flex flex-col">
           {/* Sidebar Header */}
-          <div className="px-4 py-6 bg-black/40 backdrop-blur-sm border-b border-white/10 flex flex-row items-center justify-between text-gray-400">
-            <div className="flex flex-col">
-              <h2 className="text-lg font-semibold text-white">Chats</h2>
-
+          <div className="px-4 h-19 bg-black/40 backdrop-blur-sm border-b border-white/10 flex flex-row items-center justify-between text-gray-400">
+            <div className="flex  gap-2 items-center">
+              <img src="./logo_bg.png" className="rounded-3xl w-8 h-8"></img>
+              <h2 className="text-lg font-semibold text-white ">STANGERS LIVE</h2>
             </div>
             <div className="flex h-4 items-center gap-2 text-sm ">
               <button
                 onClick={handleLogout}
-                className="px-3 py-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg text-sm transition-all duration-200"
+                className="cursor-pointer px-3 py-2 rounded-2xl bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-sm transition-all duration-200"
               >
                 Logout
               </button>
@@ -561,7 +555,7 @@ const Home: React.FC = () => {
         </div>
 
         {/* Right Main Chat Area */}
-        <div className="flex-1 flex flex-col bg-gradient-to-br from-black to-gray-900">
+        <div className="flex-1 flex flex-col bg-linear-to-br from-black to-gray-900">
           {/* Chat Header */}
           <div className="p-4 border-b border-white/10 bg-black/40 backdrop-blur-sm">
             <div className="flex items-center justify-between">
@@ -579,8 +573,8 @@ const Home: React.FC = () => {
                 </div>
               </div>
               <div>
-                {activeChat != "global" &&
-                  <button className="cursor-pointer bg-gradient-to-r from-white to-gray-300 text-black p-3 rounded-xl hover:from-gray-100 hover:to-gray-200 transition-all duration-200 hover:scale-105 active:scale-95" onClick={() => handleVideoCall(headerInfo.id)}>
+                {activeChat != "global" && headerInfo.subtitle != "Offline" &&
+                  <button className="cursor-pointer bg-linear-to-r from-white to-gray-300 text-black p-3 rounded-xl hover:from-gray-100 hover:to-gray-200 transition-all duration-200 hover:scale-105 active:scale-95" onClick={() => handleVideoCall(headerInfo.id)}>
                     <FaVideo size={20} />
                   </button>}
               </div>
@@ -600,7 +594,7 @@ const Home: React.FC = () => {
           />
         </div>
       </div>
-    </div>
+    </div >
   );
 
 };

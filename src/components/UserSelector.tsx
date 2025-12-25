@@ -53,7 +53,7 @@ const UserSelector = ({
       {/* Modal */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[80vh] flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-2xl">
+        <div className="p-6 border-b border-gray-200 bg-linear-to-r from-blue-500 to-purple-600 text-white rounded-t-2xl">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Start New Chat</h3>
             <button
