@@ -25,7 +25,6 @@ const Home: React.FC = () => {
     }>
   >([]);
   const navigate = useNavigate();
-  const [myStream, setMyStream] = useState<MediaStream | null>(null);
   const [videoModal, setVideoModal] = useState<"receiving" | "off" | "calling" | "live">("off");
   const offerRef = useRef<RTCSessionDescriptionInit | null>(null);
 
@@ -37,11 +36,30 @@ const Home: React.FC = () => {
     useUserContext();
   const { socket, isConnected } = useSocket();
 
+  const myStreamRef = useRef<MediaStream | null>(null);
+  const [myStream, setMyStream] = useState<MediaStream | null>(null);
+
+  const getUserMediaStream = async () => {
+    if (myStreamRef.current) return myStreamRef.current;
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: true
+    });
+
+    myStreamRef.current = stream;
+    setMyStream(stream); // only for UI
+    return stream;
+  };
+
+
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("want to video call", (roomId, offer) => {
+    socket.on("want to video call", async (roomId, offer) => {
       if (roomIdRef) roomIdRef.current = roomId
+
+      await getUserMediaStream();
       offerRef.current = offer;
       setVideoModal("receiving");
       console.log(`room Id set to ${roomId}`);
@@ -58,7 +76,7 @@ const Home: React.FC = () => {
 
     socket.on("ice-candidate", async (data: { candidate: RTCIceCandidateInit }) => {
       try {
-        addIceCandidate(data.candidate);
+        if (data.candidate) addIceCandidate(data.candidate);
       } catch (error) {
         console.error("Error adding ICE candidate:", error);
       }
@@ -245,7 +263,9 @@ const Home: React.FC = () => {
 
     if (response == "accept") {
 
-      if (myStream) sendStream(myStream);
+      const stream = await getUserMediaStream();
+      await sendStream(stream);
+
       const ans = await createAnswer(offerRef.current);
       socket.emit("received video call", userdata.id, roomId, ans);
       setVideoModal("live");
@@ -312,31 +332,17 @@ const Home: React.FC = () => {
     }
   };
 
-  const getUserMediaStream = useCallback(async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-    setMyStream(stream);
-  }, []);
-
-  useEffect(() => {
-    getUserMediaStream();
-  }, [getUserMediaStream])
-
   const handleVideoCall = async (receiverId: number | undefined) => {
-    setVideoModal(() => "calling");
-
-    const newRoomId = `room-${userdata.id}-${receiverId}-${Date.now()}`;
-    console.log("🎬 Setting roomId:", newRoomId);
-
-    setRoomId(newRoomId);
-    if (roomIdRef) roomIdRef.current = newRoomId;
-
-    await new Promise(resolve => setTimeout(resolve, 0));
-
     try {
-      if (myStream) {
-        console.log("Adding local stream before creating offer");
-        await sendStream(myStream);
-      }
+      const stream = await getUserMediaStream();
+      setVideoModal(() => "calling");
+
+      const newRoomId = `room-${userdata.id}-${receiverId}-${Date.now()}`;
+
+      setRoomId(newRoomId);
+      if (roomIdRef) roomIdRef.current = newRoomId;
+
+      await sendStream(stream);
 
       const offer = await createOffer();
 
@@ -346,13 +352,9 @@ const Home: React.FC = () => {
     }
   }
 
-  const handleRoomIdChange = (roomId: string) => {
-    setRoomId(roomId);
-  }
 
   const getCurrentMessages = () => {
     if (activeChat === "global") {
-      console.log(messages);
       return messages;
     } else {
       return privateMessages
@@ -398,6 +400,7 @@ const Home: React.FC = () => {
   }
 
   const handleEndCall = () => {
+
     if (myStream) {
       myStream.getTracks().forEach(track => track.stop());
     }

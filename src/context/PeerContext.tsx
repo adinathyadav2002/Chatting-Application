@@ -24,7 +24,6 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
     const { userIdRef, roomIdRef } = useUserContext();
     const peerRef = useRef<RTCPeerConnection | null>(null);
 
-
     const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]).current;
 
     // Create peer connection once
@@ -61,16 +60,11 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         peerRef.current = createPeer();
-
         return () => {
             peerRef.current?.close();
             peerRef.current = null;
         };
     }, []);
-
-
-
-
 
     const assignNewPeer = () => {
         if (peerRef.current) {
@@ -86,30 +80,6 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
     const handleRemoteStream = async (stream: MediaStream | null) => {
         setRemoteStream(stream);
     };
-
-
-
-    const handleTrackEvent = useCallback((ev: RTCTrackEvent) => {
-        const streams = ev.streams;
-        console.log("->............handle track eventcalled ");
-        if (streams && streams[0]) {
-            console.log("✅ Setting remote stream");
-            setRemoteStream(streams[0]);
-        }
-    }, []);
-
-    // Handle track events
-    useEffect(() => {
-        if (!peerRef.current) return;
-        console.log("event added for track");
-        peerRef.current.addEventListener('track', handleTrackEvent);
-
-        return () => {
-            console.log("event cleaned");
-            if (peerRef.current) peerRef.current.removeEventListener('track', handleTrackEvent);
-        };
-    }, [peerRef.current, handleTrackEvent]);
-
 
     // Send media stream to peer
     const sendStream = async (stream: MediaStream) => {
@@ -138,28 +108,32 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
             await peerRef.current.setRemoteDescription(offer);
 
 
+        console.log("Remote description set For receive. Flushing ICE queue:", iceCandidateQueue.length);
         while (iceCandidateQueue.length > 0) {
             const candidate = iceCandidateQueue.shift();
             if (candidate) {
-                await addIceCandidate(new RTCIceCandidate(candidate));
+                await addIceCandidate((candidate));
             }
         }
         const answer = await peerRef.current?.createAnswer();
         await peerRef.current?.setLocalDescription(answer);
-
 
         return answer;
     };
 
     // Set remote answer
     const setRemoteAns = async (ans: RTCSessionDescriptionInit) => {
+        if (!peerRef.current) return;
         await peerRef.current?.setRemoteDescription(ans);
+
+        console.log("Remote description set for caller. Flushing ICE queue:", iceCandidateQueue.length);
+
 
         while (iceCandidateQueue.length > 0) {
             console.log('length  not zero');
             const candidate = iceCandidateQueue.shift();
             if (candidate) {
-                await addIceCandidate(new RTCIceCandidate(candidate));
+                await addIceCandidate(candidate);
             }
         }
     };
@@ -168,16 +142,19 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
     const addIceCandidate = async (candidate: RTCIceCandidateInit) => {
         try {
             if (peerRef.current?.remoteDescription) {
-                await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+                await peerRef.current.addIceCandidate(
+                    new RTCIceCandidate(candidate)
+                );
+                console.log("➕ ICE added immediately");
             } else {
                 iceCandidateQueue.push(candidate);
-                console.log("✅ Ice candidate  added to queue");
-
+                console.log("🕒 ICE queued");
             }
         } catch (error) {
             console.error("❌ Error adding ICE candidate:", error);
         }
     };
+
 
     return (
         <PeerContext.Provider
