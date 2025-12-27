@@ -59,6 +59,31 @@ const MessageList: React.FC<MessageListProps> = ({
     (msg) => msg.sender.id !== currentUserId && msg.isRead !== "read"
   ).length;
 
+  // Only show unread divider if there are actually unread messages
+  const shouldShowUnreadDivider = hasUnreadMessages && unreadCount > 0;
+
+  // Handle scroll position when chat changes or messages load
+  useEffect(() => {
+    // Check if there are unread messages
+    const hasUnread = firstUnreadIndex !== -1;
+    setHasUnreadMessages(hasUnread);
+
+    // Only scroll if messages are loaded
+    if (messages.length === 0) return;
+
+    // Scroll to unread divider when chat changes or on initial load
+    if (hasUnread && unreadDividerRef.current) {
+      setTimeout(() => {
+        unreadDividerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    } else {
+      setTimeout(() => {
+        scrollToBottom();
+      }, 150);
+    }
+  }, [anotherUserId, messages.length, firstUnreadIndex]);
+
+  // Handle scroll events
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
@@ -79,21 +104,6 @@ const MessageList: React.FC<MessageListProps> = ({
       el.removeEventListener("scroll", handleScroll);
     };
   }, [messages]);
-
-  useEffect(() => {
-    // Check if there are unread messages
-    const hasUnread = firstUnreadIndex !== -1;
-    setHasUnreadMessages(hasUnread);
-
-    // Scroll to unread divider on initial load
-    if (hasUnread && unreadDividerRef.current) {
-      setTimeout(() => {
-        unreadDividerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 100);
-    } else {
-      scrollToBottom();
-    }
-  }, []);
 
   const formatTime = (timestamp: Date) => {
     return timestamp?.toLocaleTimeString([], {
@@ -128,7 +138,7 @@ const MessageList: React.FC<MessageListProps> = ({
               return (
                 <React.Fragment key={message?.id}>
                   {/* Unread Messages Divider */}
-                  {showUnreadDivider && anotherUserId != "0" && (
+                  {showUnreadDivider && shouldShowUnreadDivider && anotherUserId != "0" && (
                     <div
                       ref={unreadDividerRef}
                       className="flex items-center gap-3 my-6"

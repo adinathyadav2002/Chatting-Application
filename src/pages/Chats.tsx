@@ -195,6 +195,7 @@ const Home: React.FC = () => {
         content: string;
         createdAt: string;
       }) => {
+        if (anotherUserId == "1") return;
         const newMessage: Message = {
           id: 10000000,
           sender: {
@@ -211,6 +212,7 @@ const Home: React.FC = () => {
     );
 
     socket.on("Private message", (messageData: Message) => {
+      if (anotherUserId == "0") return;
       const newMessage: Message = {
         id: messageData.id,
         sender: {
