@@ -211,7 +211,7 @@ io.on("connection", (socket) => {
 
       // when user online update all the messages send by others to receiver should be marked as "send"
       await prisma.messages.updateMany({
-        where: { receiverId: userId },
+        where: { receiverId: userId, isRead: "not-send" },
         data: {
           isRead: "send",
         },
