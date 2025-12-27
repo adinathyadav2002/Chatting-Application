@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { GlobalMessages } from "../types/index";
+import type { GlobalMessages, PrivateMessage } from "../types/index";
 
 class MessageServices {
   async getGlobalMessages(): Promise<GlobalMessages[]> {
@@ -23,13 +23,12 @@ class MessageServices {
     }
   }
 
-  async getPrivateMessages(receiverId: number): Promise<GlobalMessages[]> {
+  async getPrivateMessages(receiverId: number, senderId: number): Promise<PrivateMessage[]> {
     try {
       const token = localStorage.getItem("jwt");
       const response = await axios.get(
-        `${
-          import.meta.env.VITE_API_URL
-        }/messages/private-messages/${receiverId}`,
+        `${import.meta.env.VITE_API_URL
+        }/messages/private-messages/${receiverId}/${senderId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

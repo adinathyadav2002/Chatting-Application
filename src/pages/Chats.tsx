@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
-import type { GlobalMessages, Message, PrivateMessage } from "../types";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import type { Message } from "../types";
 import type { User } from "../types/user";
 import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
 import Avatar from "../components/Avatar";
 import { useSocket } from "../hooks/useSocket";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import userServices from "../services/userServices";
 import { messageServices } from "../services/messageServices";
 import { useUserContext } from "../hooks/useUser";
@@ -14,8 +14,8 @@ import VideoCallingModal from "../components/VideoCallingModal";
 import { usePeerContext } from "../hooks/usePeer";
 
 const Home: React.FC = () => {
+  const { anotherUserId } = useParams();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [privateMessages, setPrivateMessages] = useState<PrivateMessage[]>([]);
   const [conversations, setConversations] = useState<
     Array<{
       user: User;
@@ -28,7 +28,7 @@ const Home: React.FC = () => {
   const [videoModal, setVideoModal] = useState<"receiving" | "off" | "calling" | "live">("off");
   const offerRef = useRef<RTCSessionDescriptionInit | null>(null);
 
-  const [activeChat, setActiveChat] = useState<"global" | User>("global");
+  const [activeChat, setActiveChat] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
 
   const { createOffer, createAnswer, sendStream, addIceCandidate, remoteStream, assignNewPeer } = usePeerContext();
@@ -52,6 +52,17 @@ const Home: React.FC = () => {
     return stream;
   };
 
+  useEffect(() => {
+    if (!activeChat && anotherUserId) {
+      const user = users.find((user) => {
+        return user.id === Number(anotherUserId)
+      });
+
+      console.log("set active  user" + user);
+      if (user) setActiveChat(user);
+
+    }
+  }, [users])
 
   useEffect(() => {
     if (!socket) return;
@@ -92,12 +103,15 @@ const Home: React.FC = () => {
       try {
         const response = await messageServices.getGlobalMessages();
 
-        const newMessages: Message[] = response.map((msg: GlobalMessages) => ({
+        const newMessages: Message[] = response.map((msg: Message) => ({
           id: msg.id,
-          userId: (msg.sender.id || "unknown").toString(),
-          username: msg.sender.name || "Anonymous",
+          sender: {
+            id: msg.sender.id,
+            name: msg.sender.name
+          },
           content: msg.content,
-          timestamp: new Date(msg.createdAt),
+          isGlobal: msg.isGlobal,
+          createdAt: new Date(msg.createdAt),
           type: "text",
         }));
         setMessages(() => [...newMessages]);
@@ -106,31 +120,33 @@ const Home: React.FC = () => {
       }
     };
 
-    fetchGlobalMessages();
+    if (anotherUserId == "0") fetchGlobalMessages();
   }, [userdata]);
 
   useEffect(() => {
     const fetchPrivateMessages = async () => {
       try {
         if (!userdata.id) return;
-        const response = await messageServices.getPrivateMessages(userdata.id);
-        const newPrivateMessages: PrivateMessage[] = response.map(
-          (msg: GlobalMessages) => ({
-            id: msg.id,
-            senderId: (msg.sender.id || "unknown").toString(),
-            receiverId: (msg.receiverId || "unknown").toString(),
+        const response = await messageServices.getPrivateMessages(userdata.id, Number(anotherUserId));
+        const newPrivateMessages: Message[] = response.map(
+          (msg: Message) => ({
+            id: Number(msg.id),
+            sender: { id: msg.sender.id },
+            receiverId: msg.receiverId,
             content: msg.content,
-            timestamp: new Date(msg.createdAt),
+            createdAt: new Date(msg.createdAt),
+            isGlobal: false,
+            isRead: msg.isRead,
           })
         );
 
-        setPrivateMessages(() => [...newPrivateMessages]);
+        setMessages(() => [...newPrivateMessages]);
       } catch (error) {
         console.error("Error fetching private messages:", error);
       }
     };
 
-    fetchPrivateMessages();
+    if (anotherUserId != "0") fetchPrivateMessages();
   }, [userdata]);
 
   useEffect(() => {
@@ -166,6 +182,8 @@ const Home: React.FC = () => {
     fetchUsers();
   }, [userdata]);
 
+
+
   useEffect(() => {
     if (!socket) return;
     socket.on(
@@ -177,51 +195,59 @@ const Home: React.FC = () => {
         content: string;
         createdAt: string;
       }) => {
-        const newMessage: any = {
-          id: Date.now().toString(),
-          userId: (messageData.senderId || "unknown").toString(),
-          username: messageData?.sender?.name || "Anonymous",
+        const newMessage: Message = {
+          id: 10000000,
+          sender: {
+            id: messageData.sender.id,
+            name: messageData.sender.name,
+          },
           content: messageData.content,
-          timestamp: new Date(messageData.createdAt),
-          type: "text",
+          createdAt: new Date(messageData.createdAt),
+          isGlobal: true,
         };
 
         setMessages((prev) => [...prev, newMessage]);
       }
     );
 
-    socket.on("Private message", (messageData) => {
-      const newMessage: PrivateMessage = {
-        id: Date.now().toString(),
-        senderId: (messageData.senderId || "unknown").toString(),
-        receiverId: (messageData.receiverId || "unknown").toString(),
+    socket.on("Private message", (messageData: Message) => {
+      const newMessage: Message = {
+        id: messageData.id,
+        sender: {
+          id: messageData.sender.id
+        },
+        receiverId: messageData.receiverId,
         content: messageData.content,
-        timestamp: new Date(messageData.createdAt),
+        createdAt: new Date(messageData.createdAt),
+        isGlobal: false,
+        isRead: messageData.isRead,
       };
 
+      if (!messageData.receiverId) return;
+
       const otherUserId =
-        messageData.senderId.toString() === userdata.id?.toString()
-          ? messageData.receiverId.toString()
-          : messageData.senderId.toString();
+        messageData.sender.id === userdata.id
+          ? messageData.receiverId
+          : messageData.sender.id;
 
-      setPrivateMessages((prev) => [...prev, newMessage]);
+      setMessages((prev) => [...prev, newMessage]);
 
-      const user = users.find((u) => u.id.toString() === otherUserId);
+      const user = users.find((u) => u.id === otherUserId);
       if (user) {
         setConversations((prev) => {
           const existing = prev.find(
-            (c) => c.user.id.toString() === otherUserId
+            (c) => c.user.id === otherUserId
           );
           if (existing) {
             return prev.map((c) =>
-              c.user.id.toString() === otherUserId
+              c.user.id === otherUserId
                 ? {
                   ...c,
                   lastMessage: newMessage.content,
-                  lastMessageTime: newMessage.timestamp,
+                  lastMessageTime: newMessage.createdAt,
                   unreadCount:
-                    messageData.senderId.toString() !==
-                      userdata.id?.toString()
+                    messageData.sender.id !==
+                      userdata.id
                       ? c.unreadCount + 1
                       : c.unreadCount,
                 }
@@ -233,9 +259,9 @@ const Home: React.FC = () => {
               {
                 user,
                 lastMessage: newMessage.content,
-                lastMessageTime: newMessage.timestamp,
+                lastMessageTime: newMessage.createdAt,
                 unreadCount:
-                  messageData.senderId.toString() !== userdata.id?.toString()
+                  messageData.sender.id !== userdata.id
                     ? 1
                     : 0,
               },
@@ -281,10 +307,9 @@ const Home: React.FC = () => {
       return;
     }
 
-    if (activeChat === "global") {
+    if (anotherUserId == "0") {
       const messageData = {
         userId: userdata.id.toString(),
-        name: userdata.name || "Anonymous",
         content,
         timestamp: new Date().toISOString(),
       };
@@ -292,10 +317,9 @@ const Home: React.FC = () => {
       socket.emit("Global message", messageData);
     } else {
       const messageData = {
-        name: userdata.name || "Anonymous",
         content,
         senderId: userdata.id.toString(),
-        receiverId: activeChat.id.toString(),
+        receiverId: anotherUserId,
         timestamp: new Date().toISOString(),
       };
 
@@ -303,14 +327,11 @@ const Home: React.FC = () => {
     }
   };
 
-  const handleChatSelect = (chat: "global" | User) => {
+  const handleChatSelect = (chat: User) => {
+    console.log(chat);
     setActiveChat(chat);
 
-    if (chat !== "global") {
-      setConversations((prev) =>
-        prev.map((c) => (c.user.id === chat.id ? { ...c, unreadCount: 0 } : c))
-      );
-    }
+    navigate(`/home/${chat.id}`)
   };
 
   const handleLogout = async () => {
@@ -352,49 +373,6 @@ const Home: React.FC = () => {
     }
   }
 
-
-  const getCurrentMessages = () => {
-    if (activeChat === "global") {
-      return messages;
-    } else {
-      return privateMessages
-        .filter(
-          (msg) =>
-            (msg.receiverId === activeChat.id.toString() &&
-              msg.senderId === userdata.id?.toString()) ||
-            (msg.senderId === activeChat.id.toString() &&
-              msg.receiverId === userdata.id?.toString())
-        )
-        .map(
-          (msg): Message => ({
-            id: msg.id,
-            userId: msg.senderId,
-            username:
-              users.find((u) => u.id.toString() === msg.senderId)?.name ||
-              "Unknown",
-            content: msg.content,
-            timestamp: msg.timestamp,
-
-          })
-        );
-    }
-  };
-
-  const getChatHeader = () => {
-    if (activeChat === "global") {
-      return {
-        title: "Global Chat",
-        subtitle: `${users.filter((u) => u.isOnline).length} users online`,
-      };
-    } else {
-      return {
-        title: activeChat.name,
-        subtitle: activeChat.isOnline ? "Online" : "Offline",
-        id: activeChat.id
-      };
-    }
-  };
-
   function handleChangeModal(modal: "receiving" | "off" | "calling" | "live") {
     setVideoModal(() => modal);
   }
@@ -423,6 +401,25 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     if (!socket) return;
+
+    socket.on("messages read", ({ receiverId }) => {
+
+      setMessages(prev => prev.map((msg) =>
+        msg.sender.id === receiverId && msg.isRead !== "read"
+          ? { ...msg, isRead: "read" as const }
+          : msg
+      ));
+
+    });
+
+    return () => {
+      socket.off("messages read");
+    };
+  }, [socket, messages]);
+
+
+  useEffect(() => {
+    if (!socket) return;
     socket.on("ended call", () => {
       handleEndCall();
     });
@@ -431,8 +428,6 @@ const Home: React.FC = () => {
       socket.off("ended call");
     };
   }, [socket]);
-
-  const headerInfo = getChatHeader();
 
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-900 via-black to-gray-900">
@@ -444,7 +439,7 @@ const Home: React.FC = () => {
           {/* Sidebar Header */}
           <div className="px-4 h-19 bg-black/40 backdrop-blur-sm border-b border-white/10 flex flex-row items-center justify-between text-gray-400">
             <div className="flex  gap-2 items-center">
-              <img src="./logo_bg.png" className="rounded-3xl w-8 h-8"></img>
+              <img src="/logo_bg.png" className="rounded-3xl w-8 h-8"></img>
               <h2 className="text-lg font-semibold text-white ">STANGERS LIVE</h2>
             </div>
             <div className="flex h-4 items-center gap-2 text-sm ">
@@ -461,8 +456,8 @@ const Home: React.FC = () => {
           <div className="flex-1 overflow-y-auto">
             {/* Global Chat Row */}
             <div
-              onClick={() => handleChatSelect("global")}
-              className={`p-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${activeChat === "global"
+              onClick={() => navigate("/home/0")}
+              className={`p-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${anotherUserId === "0"
                 ? "bg-white/10 border-l-4 border-l-white"
                 : ""
                 }`}
@@ -483,8 +478,8 @@ const Home: React.FC = () => {
               <div
                 key={conversation.user.id}
                 onClick={() => handleChatSelect(conversation.user)}
-                className={`p-3 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${activeChat !== "global" &&
-                  activeChat.id === conversation.user.id
+                className={`p-3 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${anotherUserId !== "global" &&
+                  Number(anotherUserId) === conversation.user.id
                   ? "bg-white/10 border-l-4 border-l-white"
                   : ""
                   }`}
@@ -529,7 +524,7 @@ const Home: React.FC = () => {
                 <div
                   key={user.id}
                   onClick={() => handleChatSelect(user)}
-                  className={`p-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${activeChat !== "global" && activeChat.id === user.id
+                  className={`p-4 border-b border-white /5 cursor - pointer hover:bg-white/5 transition-colors ${anotherUserId !== "0"
                     ? "bg-white/10 border-l-4 border-l-white"
                     : ""
                     }`}
@@ -558,32 +553,42 @@ const Home: React.FC = () => {
         <div className="flex-1 flex flex-col bg-linear-to-br from-black to-gray-900">
           {/* Chat Header */}
           <div className="p-4 border-b border-white/10 bg-black/40 backdrop-blur-sm">
-            <div className="flex items-center justify-between">
+
+            {anotherUserId === "0" ? (
               <div className="flex items-center gap-3">
-                {activeChat !== "global" ? (
-                  <Avatar type="user" name={activeChat.name} size="md" emoji={activeChat.avatar} />
-                ) : (
-                  <Avatar type="global" size="md" emoji="G" />
-                )}
+                <Avatar type="user" name={activeChat?.name} size="md" emoji={activeChat?.avatar} />
                 <div>
                   <h3 className="font-semibold text-white">
-                    {headerInfo.title}
+                    Global
                   </h3>
-                  <p className="text-sm text-gray-400">{headerInfo.subtitle}</p>
+                  <p className="text-sm text-gray-400">{`${users.filter((u) => u.isOnline).length} users online`}</p>
                 </div>
               </div>
-              <div>
-                {activeChat != "global" && headerInfo.subtitle != "Offline" &&
-                  <button className="cursor-pointer bg-linear-to-r from-white to-gray-300 text-black p-3 rounded-xl hover:from-gray-100 hover:to-gray-200 transition-all duration-200 hover:scale-105 active:scale-95" onClick={() => handleVideoCall(headerInfo.id)}>
-                    <FaVideo size={20} />
-                  </button>}
+            ) : (
+              <div className="flex items-center justify-between">
+
+                <div className="flex items-center gap-3">
+                  <Avatar type="global" size="md" emoji="G" />
+                  <div>
+                    <h3 className="font-semibold text-white">
+                      {activeChat?.name}
+                    </h3>
+                    <p className="text-sm text-gray-400">{activeChat?.isOnline ? "Online" : "Offline"}</p>
+                  </div>
+                </div>
+                <div>
+                  {anotherUserId != "0" && activeChat?.isOnline &&
+                    <button className="cursor-pointer bg-linear-to-r from-white to-gray-300 text-black p-3 rounded-xl hover:from-gray-100 hover:to-gray-200 transition-all duration-200 hover:scale-105 active:scale-95" onClick={() => handleVideoCall(Number(anotherUserId))}>
+                      <FaVideo size={20} />
+                    </button>}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Messages */}
           <MessageList
-            messages={getCurrentMessages()}
+            messages={messages}
             currentUserId={userdata.id || 0}
           />
 

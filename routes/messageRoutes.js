@@ -35,36 +35,50 @@ router.get("/global-messages", protect, async (req, res) => {
   }
 });
 
-router.get("/private-messages/:userId", protect, async (req, res) => {
-  const userId = parseInt(req.params.userId);
-  if (isNaN(userId)) {
-    return res.status(400).json({ error: "Invalid user ID" });
+router.get(
+  "/private-messages/:userId/:anotherUserId",
+  protect,
+  async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const anotherUserId = parseInt(req.params.anotherUserId);
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+    if (isNaN(anotherUserId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+    try {
+      const messages = await prisma.messages.findMany({
+        where: {
+          OR: [
+            {
+              senderId: userId,
+              receiverId: anotherUserId,
+            },
+            {
+              senderId: anotherUserId,
+              receiverId: userId,
+            },
+          ],
+        },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          senderId: true,
+          receiverId: true,
+          content: true,
+          createdAt: true,
+          isRead: true,
+          sender: true,
+        },
+      });
+      res.status(200).json(messages);
+    } catch (error) {
+      console.error("Error fetching private messages:", error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
   }
-  try {
-    const messages = await prisma.messages.findMany({
-      where: {
-        OR: [
-          { senderId: userId, isGlobal: false },
-          { receiverId: userId, isGlobal: false },
-        ],
-      },
-      orderBy: { createdAt: "asc" },
-      select: {
-        id: true,
-        content: true,
-        sender: true,
-        receiver: true,
-        createdAt: true,
-        senderId: true,
-        receiverId: true,
-        isGlobal: true,
-      },
-    });
-    res.status(200).json(messages);
-  } catch (error) {
-    console.error("Error fetching private messages:", error);
-    res.status(500).json({ error: "Failed to fetch messages" });
-  }
-});
+);
 
 export default router;

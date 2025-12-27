@@ -2,8 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, User } from 'lucide-react';
 import { useSocket } from '../hooks/useSocket';
 import { usePeerContext } from '../hooks/usePeer';
+import type { Message } from '../types';
 
-export default function VideoCallingModal({ st, onChangeModal, handleVideoCallReponse, myStream, handleEndCall }: { st: "live" | "receiving" | "calling", onChangeModal: (modal: "receiving" | "off" | "calling" | "live") => void, handleVideoCallReponse: (response: "accept" | "reject") => void, myStream: MediaStream | null, handleEndCall: () => void }) {
+export default function VideoCallingModal({ st, onChangeModal, handleVideoCallReponse, myStream, handleEndCall }: {
+    st: "live" | "receiving" | "calling", onChangeModal: (modal: "receiving" | "off" | "calling" | "live") => void, handleVideoCallReponse: (response: "accept" | "reject") => void, myStream: MediaStream | null, handleEndCall: () => void
+
+}) {
     const [isMuted, setIsMuted] = useState(true);
     const [isVideoOff, setIsVideoOff] = useState(false);
     const [callDuration, setCallDuration] = useState(0);

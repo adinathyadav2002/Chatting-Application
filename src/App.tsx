@@ -17,7 +17,7 @@ function App() {
             <BrowserRouter>
               <NavigationBridge />
               <Routes>
-                <Route path="/" element={<Home />} />
+                <Route path="/home/:anotherUserId" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
               </Routes>

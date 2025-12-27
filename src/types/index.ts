@@ -1,20 +1,16 @@
 import type { User } from "./user";
 
 export interface Message {
-  id: string;
-  userId: string;
-  username: string;
+  id?: number;
   content: string;
-  timestamp: Date;
-}
-
-export interface PrivateMessage {
-  id: string;
-  senderId: string;
-  receiverId: string;
-  content: string;
-  timestamp: Date;
-  // isRead: boolean;
+  receiverId?: number;
+  sender: {
+    id: number;
+    name?: string;
+  };
+  createdAt: Date;
+  isGlobal: boolean;
+  isRead?: string;
 }
 
 export interface Room {
@@ -25,22 +21,8 @@ export interface Room {
 }
 
 export interface SocketMessage {
-  senderId: string;
+  senderId: number;
   name: string;
   content: string;
   timestamp: string;
-}
-
-export interface GlobalMessages {
-  id: string;
-  content: string;
-  sender: {
-    id: number;
-    name: string;
-    email: string;
-    socketId?: string;
-  };
-  receiverId: number | null;
-  createdAt: Date;
-  isGlobal: boolean;
 }

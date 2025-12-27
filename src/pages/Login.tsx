@@ -62,7 +62,7 @@ const Login: React.FC = () => {
         localStorage.setItem("jwt", token);
         socket.emit("user connected", { userId: user?.id });
         showToastMessage(`Welcome back, ${user?.name}!`, "success");
-        navigate("/");
+        navigate("/home/0");
       }
 
     } catch (err) {

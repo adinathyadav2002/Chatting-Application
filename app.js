@@ -70,6 +70,7 @@ io.on("connection", (socket) => {
             receiverId: parseInt(receiverId),
             roomId: roomId,
             isGlobal: false,
+            isRead: "not-send",
           },
         });
 
@@ -208,9 +209,15 @@ io.on("connection", (socket) => {
         },
       });
 
-      console.log(`User ${userId} connected with socket ${socket.id}`);
+      // when user online update all the messages send by others to receiver should be marked as "send"
+      await prisma.messages.updateMany({
+        where: { receiverId: userId },
+        data: {
+          isRead: "send",
+        },
+      });
 
-      // ✅ Notify all connected clients that a new user is online
+      // Notify all connected clients that a new user is online
       const onlineUsers = await prisma.user.findMany({
         where: { isOnline: true },
         select: { id: true, name: true },
@@ -258,6 +265,44 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("read all messages", async (senderId, receiverId) => {
+    try {
+      // sender-iam receiver-other
+      const sId = parseInt(senderId);
+      const rId = parseInt(receiverId);
+
+      // make all messages as read for the user
+      const result = await prisma.messages.updateMany({
+        where: {
+          receiverId: sId,
+          senderId: rId,
+          isRead: { not: "read" },
+        },
+        data: {
+          isRead: "read",
+        },
+      });
+
+      //  Find sender socket
+      const receiver = await prisma.user.findUnique({
+        where: { id: rId },
+        select: { socketId: true },
+      });
+
+      if (receiver?.socketId) {
+        // Emit minimal
+        console.log("send ->>>>>>>>> to sender");
+        io.to(receiver.socketId).emit("messages read", {
+          senderId: sId,
+          receiverId: rId,
+          count: result.count,
+        });
+      }
+    } catch (error) {
+      console.log("error in reading of messages of user " + error);
+    }
+  });
+
   socket.on("Global message", async (msg) => {
     // Validation check
     if (!msg || !msg.content || !msg.userId) {
@@ -273,6 +318,7 @@ io.on("connection", (socket) => {
           senderId: parseInt(msg.userId),
           receiverId: null, // No receiver for global message
           isGlobal: true,
+          isRead: "send",
         },
         include: {
           sender: true, // Optional: include sender details (e.g. name, avatar)
@@ -293,19 +339,6 @@ io.on("connection", (socket) => {
     }
 
     try {
-      const message = await prisma.messages.create({
-        data: {
-          content: msg.content,
-          senderId: parseInt(msg.senderId),
-          receiverId: parseInt(msg.receiverId),
-          isGlobal: false,
-        },
-        include: {
-          sender: true,
-          receiver: true,
-        },
-      });
-
       // Get both sender and receiver socket info
       const [sender, receiver] = await Promise.all([
         prisma.user.findUnique({
@@ -315,6 +348,20 @@ io.on("connection", (socket) => {
           where: { id: parseInt(msg.receiverId) },
         }),
       ]);
+
+      const message = await prisma.messages.create({
+        data: {
+          content: msg.content,
+          senderId: parseInt(msg.senderId),
+          receiverId: parseInt(msg.receiverId),
+          isGlobal: false,
+          isRead: receiver.socketId ? "send" : "not-send",
+        },
+        include: {
+          sender: true,
+          receiver: true,
+        },
+      });
 
       // Emit to receiver if they're online
       if (receiver?.socketId) {

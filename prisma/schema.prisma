@@ -50,7 +50,7 @@ model Messages {
   isGlobal      Boolean  @default(false)
   createdAt     DateTime @default(now())
    
-  isRead        Boolean @default(false)
+  isRead        String    
   contentType   ContentType @default(text)
   roomId        String?      @unique
 }
