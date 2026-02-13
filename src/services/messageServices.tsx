@@ -1,8 +1,8 @@
 import axios from "axios";
-import type { GlobalMessages, PrivateMessage } from "../types/index";
+import type { Message } from "../types/index";
 
 class MessageServices {
-  async getGlobalMessages(): Promise<GlobalMessages[]> {
+  async getGlobalMessages(): Promise<Message[]> {
     try {
       const token = localStorage.getItem("jwt");
       const response = await axios.get(
@@ -16,14 +16,15 @@ class MessageServices {
       if (response.status !== 200) {
         throw new Error("Failed to fetch messages");
       }
-      return response.data;
+      console.log(response);
+      return response.data.messages;
     } catch (error) {
       console.error("Error fetching messages:", error);
       throw error;
     }
   }
 
-  async getPrivateMessages(receiverId: number, senderId: number): Promise<PrivateMessage[]> {
+  async getPrivateMessages(receiverId: number, senderId: number): Promise<Message[]> {
     try {
       const token = localStorage.getItem("jwt");
       const response = await axios.get(
@@ -38,7 +39,7 @@ class MessageServices {
       if (response.status !== 200) {
         throw new Error("Failed to fetch private messages");
       }
-      return response.data;
+      return response.data.messages;
     } catch (error) {
       console.error("Error fetching messages:", error);
       throw error;
