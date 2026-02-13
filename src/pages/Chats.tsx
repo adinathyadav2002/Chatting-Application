@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { Message } from "../types";
 import type { User } from "../types/user";
 import MessageList from "../components/MessageList";
@@ -182,8 +182,6 @@ const Home: React.FC = () => {
     fetchUsers();
   }, [userdata]);
 
-
-
   useEffect(() => {
     if (!socket) return;
     socket.on(
@@ -197,7 +195,6 @@ const Home: React.FC = () => {
       }) => {
         if (anotherUserId == "1") return;
         const newMessage: Message = {
-          id: 10000000,
           sender: {
             id: messageData.sender.id,
             name: messageData.sender.name,
@@ -465,7 +462,7 @@ const Home: React.FC = () => {
                 }`}
             >
               <div className="flex items-center gap-3">
-                <Avatar type="global" size="lg" emoji="G" />
+                <Avatar type="global" name="global" size="lg" emoji="G" />
                 <div className="flex-1">
                   <h3 className="font-medium text-white">Global Chat</h3>
                   <p className="text-sm text-gray-400">
@@ -558,7 +555,7 @@ const Home: React.FC = () => {
 
             {anotherUserId === "0" ? (
               <div className="flex items-center gap-3">
-                <Avatar type="user" name={activeChat?.name} size="md" emoji={activeChat?.avatar} />
+                <Avatar type="global" name="global" size="md" emoji="G" />
                 <div>
                   <h3 className="font-semibold text-white">
                     Global
@@ -570,7 +567,7 @@ const Home: React.FC = () => {
               <div className="flex items-center justify-between">
 
                 <div className="flex items-center gap-3">
-                  <Avatar type="global" size="md" emoji="G" />
+                  <Avatar type="user" name={activeChat?.name} size="md" emoji={activeChat?.avatar} />
                   <div>
                     <h3 className="font-semibold text-white">
                       {activeChat?.name}

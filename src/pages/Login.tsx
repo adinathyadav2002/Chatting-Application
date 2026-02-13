@@ -66,12 +66,12 @@ const Login: React.FC = () => {
       }
 
     } catch (err) {
+      ;
       console.log(`got error ${err}`);
+      showToastMessage("Invalid email or password. Please try again.", "error");
     } finally {
-      console.log("set loading to false");
       setIsLoading(false);
 
-      showToastMessage("Invalid email or password. Please try again.", "error");
     }
   };
 

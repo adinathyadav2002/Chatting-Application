@@ -1,5 +1,5 @@
 import React from "react";
-import { getDefaultAvatar, getAvatarColor } from "../utils/avatarUtils";
+import { getAvatarColor } from "../utils/avatarUtils";
 
 interface AvatarProps {
   type: "global" | "user";
@@ -29,6 +29,7 @@ const Avatar: React.FC<AvatarProps> = ({
     md: "w-4 h-4",
     lg: "w-4 h-4",
   };
+
 
   const bgColor = type === "global" ? "bg-blue-500" : getAvatarColor(name);
 

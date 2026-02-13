@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import type { Message } from "../types";
 import { Check, CheckCheck, Clock, Divide, ArrowDown } from "lucide-react";
-import { useSocket } from "../hooks/useSocket";
 import { useParams } from "react-router-dom";
+import { useSocket } from "../hooks/useSocket";
+import type { Message } from "../types";
+
 
 interface MessageListProps {
   messages: Message[];
@@ -18,20 +19,42 @@ const MessageList: React.FC<MessageListProps> = ({
   const unreadDividerRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const isProgrammaticScroll = useRef(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { anotherUserId } = useParams();
   const { socket } = useSocket();
 
   const scrollToBottom = () => {
+    isProgrammaticScroll.current = true;
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop =
         messagesContainerRef.current.scrollHeight;
     }
+    // Clear after a short delay
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+    scrollTimeoutRef.current = setTimeout(() => {
+      isProgrammaticScroll.current = false;
+    }, 100);
   };
 
   const scrollToUnread = () => {
+    isProgrammaticScroll.current = true;
+
     if (unreadDividerRef.current) {
-      unreadDividerRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      unreadDividerRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+      // Reset flag after smooth scroll completes
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      scrollTimeoutRef.current = setTimeout(() => {
+        isProgrammaticScroll.current = false;
+      }, 1500); // Longer timeout for smooth scroll
     } else {
       scrollToBottom();
     }
@@ -40,14 +63,30 @@ const MessageList: React.FC<MessageListProps> = ({
   const isAtBottom = () => {
     const el = messagesContainerRef.current;
     if (!el) return false;
-    return el.scrollHeight - el.scrollTop - el.clientHeight < 10;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 50;
   };
 
   const emitReadAll = () => {
-    socket?.emit("read all messages", currentUserId, Number(anotherUserId));
+    if (isProgrammaticScroll.current) {
+      console.log("Skipping emitReadAll - programmatic scroll");
+      return;
+    }
+
+    const count = messages.reduce((acc, mes) => {
+      if (
+        (mes.isRead === "not-send" || mes.isRead === "send") &&
+        mes.sender.id === Number(anotherUserId)
+      ) {
+        return acc + 1;
+      }
+      return acc;
+    }, 0);
+
+    if (count !== 0 && socket) {
+      socket.emit("read all messages", currentUserId, Number(anotherUserId));
+    }
   };
 
-  // Find the index of the first unread message
   const getFirstUnreadIndex = () => {
     return messages.findIndex(
       (msg) => msg.sender.id !== currentUserId && msg.isRead !== "read"
@@ -59,29 +98,53 @@ const MessageList: React.FC<MessageListProps> = ({
     (msg) => msg.sender.id !== currentUserId && msg.isRead !== "read"
   ).length;
 
-  // Only show unread divider if there are actually unread messages
   const shouldShowUnreadDivider = hasUnreadMessages && unreadCount > 0;
 
-  // Handle scroll position when chat changes or messages load
+  // Handle initial scroll when chat loads or changes
   useEffect(() => {
-    // Check if there are unread messages
     const hasUnread = firstUnreadIndex !== -1;
     setHasUnreadMessages(hasUnread);
 
-    // Only scroll if messages are loaded
     if (messages.length === 0) return;
 
-    // Scroll to unread divider when chat changes or on initial load
-    if (hasUnread && unreadDividerRef.current) {
-      setTimeout(() => {
-        unreadDividerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 150);
-    } else {
-      setTimeout(() => {
+    // Set programmatic scroll flag
+    isProgrammaticScroll.current = true;
+
+    const scrollTimer = setTimeout(() => {
+      if (hasUnread && unreadDividerRef.current) {
+        unreadDividerRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+        // Keep flag set during smooth scroll
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+        scrollTimeoutRef.current = setTimeout(() => {
+          isProgrammaticScroll.current = false;
+        }, 1500);
+      } else {
         scrollToBottom();
-      }, 150);
+      }
+    }, 150);
+
+    return () => {
+      clearTimeout(scrollTimer);
+    };
+  }, [anotherUserId]);
+
+  // Separate effect for new messages
+  useEffect(() => {
+    // Only scroll to bottom for new messages if user was already at bottom
+    if (messages.length > 0) {
+      const wasAtBottom = isAtBottom();
+      if (wasAtBottom) {
+        setTimeout(() => {
+          scrollToBottom();
+        }, 100);
+      }
     }
-  }, [anotherUserId, messages.length, firstUnreadIndex]);
+  }, [messages.length]);
 
   // Handle scroll events
   useEffect(() => {
@@ -89,7 +152,15 @@ const MessageList: React.FC<MessageListProps> = ({
     if (!el) return;
 
     const handleScroll = () => {
-      if (isAtBottom()) {
+      // CRITICAL: Skip all logic during programmatic scrolls
+      if (isProgrammaticScroll.current) {
+        console.log("Ignoring scroll event - programmatic");
+        return;
+      }
+
+      const atBottom = isAtBottom();
+
+      if (atBottom) {
         emitReadAll();
         setShowScrollButton(false);
         setHasUnreadMessages(false);
@@ -98,12 +169,15 @@ const MessageList: React.FC<MessageListProps> = ({
       }
     };
 
-    el.addEventListener("scroll", handleScroll);
+    el.addEventListener("scroll", handleScroll, { passive: true });
 
     return () => {
       el.removeEventListener("scroll", handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
     };
-  }, [messages]);
+  }, [messages, currentUserId, anotherUserId]);
 
   const formatTime = (timestamp: Date) => {
     return timestamp?.toLocaleTimeString([], {
@@ -116,15 +190,12 @@ const MessageList: React.FC<MessageListProps> = ({
     <div className="relative flex-1 overflow-hidden">
       <div
         ref={messagesContainerRef}
-        className="h-full overflow-y-auto p-6 bg-gradient-to-b from-black via-gray-900 to-black"
+        className="h-full overflow-y-auto p-6 bg-linear-to-b from-black via-gray-900 to-black"
       >
         {messages.length === 0 ? (
-          /* EMPTY STATE */
           <div className="h-full flex flex-col items-center justify-center text-center text-gray-400">
             <Divide size={40} className="mb-4 opacity-40" />
-            <p className="text-base tracking-wide">
-              No messages yet
-            </p>
+            <p className="text-base tracking-wide">No messages yet</p>
             <p className="text-base text-gray-500 mt-1">
               Start the conversation ✨
             </p>
@@ -133,31 +204,35 @@ const MessageList: React.FC<MessageListProps> = ({
           <div className="space-y-4">
             {messages.map((message, index) => {
               const isOwnMessage = message?.sender?.id === currentUserId;
-              const showUnreadDivider = index === firstUnreadIndex && firstUnreadIndex !== -1;
+              const showUnreadDivider =
+                index === firstUnreadIndex && firstUnreadIndex !== -1;
 
               return (
-                <React.Fragment key={message?.id}>
-                  {/* Unread Messages Divider */}
-                  {showUnreadDivider && shouldShowUnreadDivider && anotherUserId != "0" && (
-                    <div
-                      ref={unreadDividerRef}
-                      className="flex items-center gap-3 my-6"
-                    >
-                      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
-                      <span className="text-xs font-medium text-blue-400 px-3 py-1 bg-blue-500/10 rounded-full border border-blue-500/30">
-                        {unreadCount} Unread {unreadCount === 1 ? "Message" : "Messages"}
-                      </span>
-                      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
-                    </div>
-                  )}
+                <React.Fragment key={message.id || message.content}>
+                  {showUnreadDivider &&
+                    shouldShowUnreadDivider &&
+                    anotherUserId !== "0" && (
+                      <div
+                        ref={unreadDividerRef}
+                        className="flex items-center gap-3 my-6"
+                      >
+                        <div className="flex-1 h-px bg-linear-to-r from-transparent via-blue-500 to-transparent"></div>
+                        <span className="text-xs font-medium text-blue-400 px-3 py-1 bg-blue-500/10 rounded-full border border-blue-500/30">
+                          {unreadCount} Unread{" "}
+                          {unreadCount === 1 ? "Message" : "Messages"}
+                        </span>
+                        <div className="flex-1 h-px bg-linear-to-r from-transparent via-blue-500 to-transparent"></div>
+                      </div>
+                    )}
 
                   <div
-                    className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
+                    className={`flex ${isOwnMessage ? "justify-end" : "justify-start"
+                      }`}
                   >
                     <div
                       className={`max-w-xs relative lg:max-w-md min-w-24 pr-5 pl-3 py-1 pb-4 rounded-2xl shadow-lg transition-all duration-200 hover:shadow-xl ${isOwnMessage
-                        ? "bg-gradient-to-r from-white to-gray-200 text-black rounded-br-md"
-                        : "bg-gradient-to-br from-gray-800 to-gray-900 text-white rounded-bl-md border border-white/10"
+                        ? "bg-linear-to-r from-white to-gray-200 text-black rounded-br-md"
+                        : "bg-linear-to-br from-gray-800 to-gray-900 text-white rounded-bl-md border border-white/10"
                         }`}
                     >
                       {anotherUserId === "0" && (
@@ -176,7 +251,10 @@ const MessageList: React.FC<MessageListProps> = ({
                         {formatTime(message?.createdAt)}
 
                         {isOwnMessage && message.isRead === "not-send" && (
-                          <Clock size={12} className="text-gray-400 animate-pulse" />
+                          <Clock
+                            size={12}
+                            className="text-gray-400 animate-pulse"
+                          />
                         )}
 
                         {isOwnMessage && message.isRead === "send" && (
@@ -198,12 +276,13 @@ const MessageList: React.FC<MessageListProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Floating Scroll Button */}
       {showScrollButton && (
         <button
           onClick={scrollToUnread}
           className="absolute bottom-6 right-6 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110 active:scale-95 z-10 group"
-          aria-label={hasUnreadMessages ? "Scroll to unread messages" : "Scroll to bottom"}
+          aria-label={
+            hasUnreadMessages ? "Scroll to unread messages" : "Scroll to bottom"
+          }
         >
           <ArrowDown size={20} className="group-hover:animate-bounce" />
           {hasUnreadMessages && unreadCount > 0 && (

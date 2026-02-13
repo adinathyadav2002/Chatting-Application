@@ -29,7 +29,6 @@ class UserServices {
   async loginUser(email: string, password: string) {
     // call axios post request to validate user
 
-    //  res.cookie("jwt", token, cookieOptions); store cookie in browser
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/user/login`,
@@ -45,8 +44,6 @@ class UserServices {
         return { success: true, user, token };
       }
 
-      // if you are using axios then this will not be excuted
-      // console.log("hii");
 
     } catch (err) {
       console.log(err);
