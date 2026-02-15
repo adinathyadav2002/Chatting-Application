@@ -8,7 +8,7 @@ const router = express.Router();
 router.get("/global-messages", protect, async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = 10;
+    const limit = 15;
     const skip = (page - 1) * limit;
 
     const [messages, totalCount] = await Promise.all([
@@ -68,7 +68,7 @@ router.get(
     const userId = parseInt(req.params.userId);
     const anotherUserId = parseInt(req.params.anotherUserId);
     const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = 10;
+    const limit = 15;
     const skip = (page - 1) * limit;
 
     if (isNaN(userId)) {

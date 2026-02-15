@@ -30,6 +30,8 @@ const Home: React.FC = () => {
 
   const [activeChat, setActiveChat] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [hasMoreGlobalMessages, setHasMoreGlobalMessages] = useState(false);
+  const [hasMorePrivateMessages, setHasMorePrivateMessages] = useState(false);
 
   const { createOffer, createAnswer, sendStream, addIceCandidate, remoteStream, assignNewPeer } = usePeerContext();
   const { userdata, isLoggedIn, handleUpdateUser, setIsLoggedIn, roomId, setRoomId, roomIdRef } =
@@ -99,11 +101,11 @@ const Home: React.FC = () => {
   }, [socket]);
 
   useEffect(() => {
-    const fetchGlobalMessages = async () => {
+    const fetchGlobalMessages = async (page: number = 1) => {
       try {
-        const response = await messageServices.getGlobalMessages();
+        const response = await messageServices.getGlobalMessages(page);
 
-        const newMessages: Message[] = response.map((msg: Message) => ({
+        const newMessages: Message[] = response.messages.map((msg: Message) => ({
           id: msg.id,
           sender: {
             id: msg.sender.id,
@@ -114,7 +116,14 @@ const Home: React.FC = () => {
           createdAt: new Date(msg.createdAt),
           type: "text",
         }));
-        setMessages(() => [...newMessages]);
+        
+        if (page === 1) {
+          setMessages(() => [...newMessages]);
+        } else {
+          setMessages((prev) => [...newMessages, ...prev]);
+        }
+        
+        setHasMoreGlobalMessages(response.pagination.hasNextPage);
       } catch (error) {
         console.error("Error fetching global messages:", error);
       }
@@ -124,11 +133,11 @@ const Home: React.FC = () => {
   }, [userdata]);
 
   useEffect(() => {
-    const fetchPrivateMessages = async () => {
+    const fetchPrivateMessages = async (page: number = 1) => {
       try {
         if (!userdata.id) return;
-        const response = await messageServices.getPrivateMessages(userdata.id, Number(anotherUserId));
-        const newPrivateMessages: Message[] = response.map(
+        const response = await messageServices.getPrivateMessages(userdata.id, Number(anotherUserId), page);
+        const newPrivateMessages: Message[] = response.messages.map(
           (msg: Message) => ({
             id: Number(msg.id),
             sender: { id: msg.sender.id },
@@ -140,7 +149,13 @@ const Home: React.FC = () => {
           })
         );
 
-        setMessages(() => [...newPrivateMessages]);
+        if (page === 1) {
+          setMessages(() => [...newPrivateMessages]);
+        } else {
+          setMessages((prev) => [...newPrivateMessages, ...prev]);
+        }
+        
+        setHasMorePrivateMessages(response.pagination.hasNextPage);
       } catch (error) {
         console.error("Error fetching private messages:", error);
       }
@@ -398,6 +413,58 @@ const Home: React.FC = () => {
     setVideoModal("off");
   }
 
+  const loadMoreGlobalMessages = async (page: number) => {
+    const fetchGlobalMessages = async (page: number) => {
+      try {
+        const response = await messageServices.getGlobalMessages(page);
+
+        const newMessages: Message[] = response.messages.map((msg: Message) => ({
+          id: msg.id,
+          sender: {
+            id: msg.sender.id,
+            name: msg.sender.name
+          },
+          content: msg.content,
+          isGlobal: msg.isGlobal,
+          createdAt: new Date(msg.createdAt),
+          type: "text",
+        }));
+        
+        setMessages((prev) => [...newMessages, ...prev]);
+        setHasMoreGlobalMessages(response.pagination.hasNextPage);
+      } catch (error) {
+        console.error("Error fetching global messages:", error);
+      }
+    };
+    await fetchGlobalMessages(page);
+  };
+
+  const loadMorePrivateMessages = async (page: number) => {
+    const fetchPrivateMessages = async (page: number) => {
+      try {
+        if (!userdata.id) return;
+        const response = await messageServices.getPrivateMessages(userdata.id, Number(anotherUserId), page);
+        const newPrivateMessages: Message[] = response.messages.map(
+          (msg: Message) => ({
+            id: Number(msg.id),
+            sender: { id: msg.sender.id },
+            receiverId: msg.receiverId,
+            content: msg.content,
+            createdAt: new Date(msg.createdAt),
+            isGlobal: false,
+            isRead: msg.isRead,
+          })
+        );
+
+        setMessages((prev) => [...newPrivateMessages, ...prev]);
+        setHasMorePrivateMessages(response.pagination.hasNextPage);
+      } catch (error) {
+        console.error("Error fetching private messages:", error);
+      }
+    };
+    await fetchPrivateMessages(page);
+  };
+
   useEffect(() => {
     if (!socket) return;
 
@@ -589,6 +656,8 @@ const Home: React.FC = () => {
           <MessageList
             messages={messages}
             currentUserId={userdata.id || 0}
+            onLoadMore={anotherUserId === "0" ? loadMoreGlobalMessages : loadMorePrivateMessages}
+            hasMoreMessages={anotherUserId === "0" ? hasMoreGlobalMessages : hasMorePrivateMessages}
           />
 
           {/* Message Input */}

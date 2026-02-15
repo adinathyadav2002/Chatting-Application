@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Check, CheckCheck, Clock, Divide, ArrowDown } from "lucide-react";
+import { Check, CheckCheck, Clock, Divide, ArrowDown, Loader2 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useSocket } from "../hooks/useSocket";
 import type { Message } from "../types";
@@ -8,11 +8,15 @@ import type { Message } from "../types";
 interface MessageListProps {
   messages: Message[];
   currentUserId: number;
+  onLoadMore?: (page: number) => Promise<void>;
+  hasMoreMessages?: boolean;
 }
 
 const MessageList: React.FC<MessageListProps> = ({
   messages,
   currentUserId,
+  onLoadMore,
+  hasMoreMessages = false,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -22,8 +26,39 @@ const MessageList: React.FC<MessageListProps> = ({
   const isProgrammaticScroll = useRef(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(hasMoreMessages);
+
+  // Track scroll position for loading more messages
+  const previousScrollHeightRef = useRef<number>(0);
+  const isLoadingMoreRef = useRef(false);
+
   const { anotherUserId } = useParams();
   const { socket } = useSocket();
+
+  const loadMoreMessages = async () => {
+    if (!onLoadMore || isLoadingMore || !hasMore) return;
+
+    setIsLoadingMore(true);
+    isLoadingMoreRef.current = true;
+    const nextPage = currentPage + 1;
+
+    try {
+      // Store current scroll height before loading
+      if (messagesContainerRef.current) {
+        previousScrollHeightRef.current = messagesContainerRef.current.scrollHeight;
+      }
+
+      await onLoadMore(nextPage);
+      setCurrentPage(nextPage);
+    } catch (error) {
+      console.error('Error loading more messages:', error);
+    } finally {
+      setIsLoadingMore(false);
+      isLoadingMoreRef.current = false;
+    }
+  };
 
   const scrollToBottom = () => {
     isProgrammaticScroll.current = true;
@@ -146,6 +181,24 @@ const MessageList: React.FC<MessageListProps> = ({
     }
   }, [messages.length]);
 
+  // Preserve scroll position when loading more messages
+  useEffect(() => {
+    if (!isLoadingMore && previousScrollHeightRef.current > 0 && messagesContainerRef.current) {
+      const el = messagesContainerRef.current;
+      const newScrollHeight = el.scrollHeight;
+      const scrollDifference = newScrollHeight - previousScrollHeightRef.current;
+      
+      // Adjust scroll position to account for new messages at the top
+      el.scrollTop += scrollDifference;
+      previousScrollHeightRef.current = 0;
+    }
+  }, [messages.length, isLoadingMore]);
+
+  // Update hasMore when prop changes
+  useEffect(() => {
+    setHasMore(hasMoreMessages);
+  }, [hasMoreMessages]);
+
   // Handle scroll events
   useEffect(() => {
     const el = messagesContainerRef.current;
@@ -159,6 +212,12 @@ const MessageList: React.FC<MessageListProps> = ({
       }
 
       const atBottom = isAtBottom();
+      const atVeryTop = el.scrollTop <= 10; // At the very top threshold
+
+      // Load more messages ONLY when at the very top and trying to scroll up further
+      if (atVeryTop && hasMore && !isLoadingMore && !isLoadingMoreRef.current) {
+        loadMoreMessages();
+      }
 
       if (atBottom) {
         emitReadAll();
@@ -202,6 +261,11 @@ const MessageList: React.FC<MessageListProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
+            {isLoadingMore && (
+              <div className="flex justify-center py-4">
+                <Loader2 size={24} className="animate-spin text-gray-400" />
+              </div>
+            )}
             {messages.map((message, index) => {
               const isOwnMessage = message?.sender?.id === currentUserId;
               const showUnreadDivider =
