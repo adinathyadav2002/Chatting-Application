@@ -116,13 +116,13 @@ const Home: React.FC = () => {
           createdAt: new Date(msg.createdAt),
           type: "text",
         }));
-        
+
         if (page === 1) {
           setMessages(() => [...newMessages]);
         } else {
           setMessages((prev) => [...newMessages, ...prev]);
         }
-        
+
         setHasMoreGlobalMessages(response.pagination.hasNextPage);
       } catch (error) {
         console.error("Error fetching global messages:", error);
@@ -154,7 +154,7 @@ const Home: React.FC = () => {
         } else {
           setMessages((prev) => [...newPrivateMessages, ...prev]);
         }
-        
+
         setHasMorePrivateMessages(response.pagination.hasNextPage);
       } catch (error) {
         console.error("Error fetching private messages:", error);
@@ -225,6 +225,7 @@ const Home: React.FC = () => {
 
     socket.on("Private message", (messageData: Message) => {
       if (anotherUserId == "0") return;
+      if (anotherUserId != messageData.receiverId && anotherUserId && anotherUserId != messageData.sender.id.toString()) return;
       const newMessage: Message = {
         id: messageData.id,
         sender: {
@@ -429,7 +430,7 @@ const Home: React.FC = () => {
           createdAt: new Date(msg.createdAt),
           type: "text",
         }));
-        
+
         setMessages((prev) => [...newMessages, ...prev]);
         setHasMoreGlobalMessages(response.pagination.hasNextPage);
       } catch (error) {
