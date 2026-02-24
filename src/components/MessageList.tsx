@@ -166,7 +166,7 @@ const MessageList: React.FC<MessageListProps> = ({
     return () => {
       clearTimeout(scrollTimer);
     };
-  }, [anotherUserId]);
+  }, [anotherUserId, messages.length]);
 
   // Separate effect for new messages
   useEffect(() => {
@@ -194,10 +194,10 @@ const MessageList: React.FC<MessageListProps> = ({
     }
   }, [messages.length, isLoadingMore]);
 
-  // Update hasMore when prop changes
+  // Update hasMore when prop changes and also initialize on mount
   useEffect(() => {
     setHasMore(hasMoreMessages);
-  }, [hasMoreMessages]);
+  }, [hasMoreMessages, messages.length]); // Add messages.length to trigger when messages load
 
   // Handle scroll events
   useEffect(() => {

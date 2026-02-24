@@ -130,7 +130,7 @@ const Home: React.FC = () => {
     };
 
     if (anotherUserId == "0") fetchGlobalMessages();
-  }, [userdata]);
+  }, [userdata, anotherUserId]);
 
   useEffect(() => {
     const fetchPrivateMessages = async (page: number = 1) => {
@@ -162,7 +162,7 @@ const Home: React.FC = () => {
     };
 
     if (anotherUserId != "0") fetchPrivateMessages();
-  }, [userdata]);
+  }, [userdata, anotherUserId]);
 
   useEffect(() => {
     if (!socket) return;
@@ -195,7 +195,7 @@ const Home: React.FC = () => {
       }
     };
     fetchUsers();
-  }, [userdata]);
+  }, [userdata, anotherUserId]);
 
   useEffect(() => {
     if (!socket) return;
