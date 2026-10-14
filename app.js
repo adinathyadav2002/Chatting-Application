@@ -265,6 +265,48 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("read messages", async (data) => {
+    try {
+      const { senderId, receiverId, messageIds } = data || {};
+      const sId = parseInt(senderId);
+      const rId = parseInt(receiverId);
+      if (!sId || !rId) return;
+
+      const whereClause = {
+        receiverId: sId,
+        senderId: rId,
+        isRead: { not: "read" },
+      };
+
+      if (Array.isArray(messageIds) && messageIds.length > 0) {
+        whereClause.id = { in: messageIds.map((id) => parseInt(id)) };
+      }
+
+      const result = await prisma.messages.updateMany({
+        where: whereClause,
+        data: {
+          isRead: "read",
+        },
+      });
+
+      const receiver = await prisma.user.findUnique({
+        where: { id: rId },
+        select: { socketId: true },
+      });
+
+      if (receiver?.socketId) {
+        io.to(receiver.socketId).emit("messages read", {
+          senderId: sId,
+          receiverId: rId,
+          messageIds: messageIds || [],
+          count: result.count,
+        });
+      }
+    } catch (error) {
+      console.log("error in reading messages: " + error);
+    }
+  });
+
   socket.on("read all messages", async (senderId, receiverId) => {
     try {
       // sender-iam receiver-other

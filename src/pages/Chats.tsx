@@ -33,7 +33,7 @@ const Home: React.FC = () => {
   const [hasMoreGlobalMessages, setHasMoreGlobalMessages] = useState(false);
   const [hasMorePrivateMessages, setHasMorePrivateMessages] = useState(false);
 
-  const { createOffer, createAnswer, sendStream, addIceCandidate, remoteStream, assignNewPeer } = usePeerContext();
+  const { createOffer, createAnswer, sendStream, remoteStream, assignNewPeer } = usePeerContext();
   const { userdata, isLoggedIn, handleUpdateUser, setIsLoggedIn, roomId, setRoomId, roomIdRef } =
     useUserContext();
   const { socket, isConnected } = useSocket();
@@ -71,34 +71,42 @@ const Home: React.FC = () => {
 
     socket.on("want to video call", async (roomId, offer) => {
       if (roomIdRef) roomIdRef.current = roomId
+      if (offerRef) offerRef.current = offer
 
       await getUserMediaStream();
+      if (myStreamRef.current) {
+        await sendStream(myStreamRef.current);
+      }
 
-      offerRef.current = offer;
-      setRoomId(roomId);
       setVideoModal("receiving");
     });
+
+    socket.on("ice-candidate", async ({ candidate, userId }) => {
+      if (userId !== Number(anotherUserId)) return;
+      const { addIceCandidate } = usePeerContext();
+      await addIceCandidate(candidate);
+    });
+
     return () => {
       socket.off("want to video call");
+      socket.off("ice-candidate");
     };
 
-  }, [socket])
+  }, [socket, anotherUserId])
 
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("ice-candidate", async (data: { candidate: RTCIceCandidateInit }) => {
-      try {
-        if (data.candidate) addIceCandidate(data.candidate);
-      } catch (error) {
-        console.error("Error adding ICE candidate:", error);
-      }
+    socket.on("receiver accepted call", async (ans: RTCSessionDescriptionInit) => {
+      const { setRemoteAns } = usePeerContext();
+      await setRemoteAns(ans)
+      handleChangeModal("live");
     });
 
     return () => {
-      socket.off("ice-candidate");
+      socket.off("receiver accepted call");
     };
-  }, [socket]);
+  }, [socket, handleChangeModal]);
 
   useEffect(() => {
     const fetchGlobalMessages = async (page: number = 1) => {
@@ -466,23 +474,72 @@ const Home: React.FC = () => {
     await fetchPrivateMessages(page);
   };
 
+  const handleMessagesRead = (messageIds: number[]) => {
+    if (!messageIds.length || !userdata.id || !anotherUserId || anotherUserId === "0") return;
+
+    const otherUserId = Number(anotherUserId);
+
+    // Update local messages state to read
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id && messageIds.includes(msg.id) && msg.isRead !== "read"
+          ? { ...msg, isRead: "read" as const }
+          : msg
+      )
+    );
+
+    // Decrement unread count for this conversation in the sidebar
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.user.id === otherUserId
+          ? {
+              ...c,
+              unreadCount: Math.max(0, c.unreadCount - messageIds.length),
+            }
+          : c
+      )
+    );
+
+    // Emit socket event to persist and inform sender
+    if (socket) {
+      socket.emit("read messages", {
+        senderId: userdata.id,
+        receiverId: otherUserId,
+        messageIds,
+      });
+    }
+  };
+
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("messages read", ({ receiverId }) => {
+    const handleMessagesReadEvent = ({
+      receiverId,
+      messageIds,
+    }: {
+      receiverId: number;
+      messageIds?: number[];
+    }) => {
+      setMessages((prev) =>
+        prev.map((msg) => {
+          const isSender = msg.sender.id === receiverId;
+          const isIdMatch =
+            !messageIds ||
+            messageIds.length === 0 ||
+            (msg.id != null && messageIds.includes(msg.id));
+          return isSender && isIdMatch && msg.isRead !== "read"
+            ? { ...msg, isRead: "read" as const }
+            : msg;
+        })
+      );
+    };
 
-      setMessages(prev => prev.map((msg) =>
-        msg.sender.id === receiverId && msg.isRead !== "read"
-          ? { ...msg, isRead: "read" as const }
-          : msg
-      ));
-
-    });
+    socket.on("messages read", handleMessagesReadEvent);
 
     return () => {
-      socket.off("messages read");
+      socket.off("messages read", handleMessagesReadEvent);
     };
-  }, [socket, messages]);
+  }, [socket]);
 
 
   useEffect(() => {
@@ -659,6 +716,7 @@ const Home: React.FC = () => {
             currentUserId={userdata.id || 0}
             onLoadMore={anotherUserId === "0" ? loadMoreGlobalMessages : loadMorePrivateMessages}
             hasMoreMessages={anotherUserId === "0" ? hasMoreGlobalMessages : hasMorePrivateMessages}
+            onMessagesRead={handleMessagesRead}
           />
 
           {/* Message Input */}
