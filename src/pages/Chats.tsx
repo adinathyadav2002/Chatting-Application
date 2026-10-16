@@ -575,7 +575,17 @@ const Home: React.FC = () => {
 
   return (
     <div className="fixed inset-0 h-[100dvh] w-full bg-zinc-950 text-zinc-100 overflow-hidden flex flex-col select-none">
-      {videoModal != "off" && <VideoCallingModal st={videoModal} onChangeModal={handleChangeModal} handleVideoCallReponse={handleVideoCallReponse} myStream={myStream} handleEndCall={handleEndCall} />}
+      {videoModal != "off" && (
+        <VideoCallingModal
+          st={videoModal}
+          onChangeModal={handleChangeModal}
+          handleVideoCallReponse={handleVideoCallReponse}
+          myStream={myStream}
+          handleEndCall={handleEndCall}
+          userName={activeChat?.name}
+          userAvatar={activeChat?.avatar}
+        />
+      )}
 
       <div className="flex h-full w-full bg-zinc-950 overflow-hidden">
         {/* Left Sidebar - Conversations */}

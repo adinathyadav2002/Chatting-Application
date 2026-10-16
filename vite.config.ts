@@ -31,6 +31,17 @@ export default defineConfig({
         ws: true,
         changeOrigin: true,
         secure: false,
+        configure: (proxy) => {
+          proxy.on("error", (err: any) => {
+            if (
+              err?.message?.includes("ECONNRESET") ||
+              err?.message?.includes("ended by the other party")
+            ) {
+              return;
+            }
+            console.error("Socket proxy error:", err);
+          });
+        },
       },
     },
   },
