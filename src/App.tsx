@@ -18,6 +18,8 @@ function App() {
               <NavigationBridge />
               <Routes>
                 <Route path="/home/:anotherUserId" element={<Home />} />
+                <Route path="/home" element={<Home />} />
+                <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
               </Routes>

@@ -32,6 +32,7 @@ const io = new SocketIOServer(server, {
     origin: [
       process.env.LOCAL_IP_FRONTEND, // Vite default
       process.env.NETWORK_IP_FRONTEND,
+      "*"
     ],
     methods: ["GET", "POST"],
   },
@@ -467,21 +468,27 @@ io.on("connection", (socket) => {
 const allowedOrigins = [
   process.env.NETWORK_IP_FRONTEND,
   process.env.LOCAL_IP_FRONTEND,
+  "*"
 ];
 
 // set origin for CORS
 app.use(
+  // cors({
+  // origin: '*', for all origins
+  //   origin: function (origin, callback) {
+  //     if (!origin || allowedOrigins.includes(origin)) {
+  //       callback(null, true);
+  //     } else {
+  //       callback(new Error("Not allowed by CORS"));
+  //     }
+  //   },
+  //   credentials: true, // 🔥 Important: Allows cookies
+  // })
   cors({
-    // origin: '*', for all origins
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true, // 🔥 Important: Allows cookies
+    origin: true, // Allows any origin dynamically with credentials
+    credentials: true,
   })
+
 );
 
 const port = process.env.VITE_SERVER_PORT || 4000;

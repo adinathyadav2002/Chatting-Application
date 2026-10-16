@@ -1,13 +1,32 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import basicSsl from "@vitejs/plugin-basic-ssl";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), basicSsl()],
   server: {
-    host: "0.0.0.0", // Allow external connections
+    host: "0.0.0.0",
     port: 5173,
-    allowedHosts: ["chat.adinathyadav.xyz"], // Allow your subdomain
+    proxy: {
+      "/user": {
+        target: "http://localhost:4000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/messages": {
+        target: "http://localhost:4000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/socket.io": {
+        target: "http://localhost:4000",
+        ws: true,
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 });
+

@@ -10,6 +10,7 @@ import userServices from "../services/userServices";
 import { messageServices } from "../services/messageServices";
 import { useUserContext } from "../hooks/useUser";
 import { FaVideo } from "react-icons/fa";
+import { ArrowLeft } from "lucide-react";
 import VideoCallingModal from "../components/VideoCallingModal";
 import { usePeerContext } from "../hooks/usePeer";
 
@@ -557,19 +558,21 @@ const Home: React.FC = () => {
     <div className="min-h-screen bg-linear-to-br from-gray-900 via-black to-gray-900">
       {videoModal != "off" && <VideoCallingModal st={videoModal} onChangeModal={handleChangeModal} handleVideoCallReponse={handleVideoCallReponse} myStream={myStream} handleEndCall={handleEndCall} />}
 
-      <div className="flex h-screen w-full bg-linear-to-br from-gray-900 via-black to-gray-900">
+      <div className="flex h-screen w-full bg-linear-to-br from-gray-900 via-black to-gray-900 overflow-hidden">
         {/* Left Sidebar - Conversations */}
-        <div className="w-80 bg-linear-to-b from-gray-900 to-black border-r border-white/10 flex flex-col">
+        <div className={`w-full md:w-80 md:min-w-80 bg-linear-to-b from-gray-900 to-black border-r border-white/10 flex flex-col h-full ${
+          anotherUserId ? "hidden md:flex" : "flex"
+        }`}>
           {/* Sidebar Header */}
           <div className="px-4 h-19 bg-black/40 backdrop-blur-sm border-b border-white/10 flex flex-row items-center justify-between text-gray-400">
-            <div className="flex  gap-2 items-center">
-              <img src="/logo_bg.png" className="rounded-3xl w-8 h-8"></img>
-              <h2 className="text-lg font-semibold text-white ">STANGERS LIVE</h2>
+            <div className="flex gap-2 items-center">
+              <img src="/logo_bg.png" className="rounded-3xl w-8 h-8" alt="Logo"></img>
+              <h2 className="text-lg font-semibold text-white tracking-wide">STRANGERS LIVE</h2>
             </div>
-            <div className="flex h-4 items-center gap-2 text-sm ">
+            <div className="flex h-4 items-center gap-2 text-sm">
               <button
                 onClick={handleLogout}
-                className="cursor-pointer px-3 py-2 rounded-2xl bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-sm transition-all duration-200"
+                className="cursor-pointer px-3 py-1.5 md:py-2 rounded-2xl bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-xs md:text-sm transition-all duration-200"
               >
                 Logout
               </button>
@@ -648,7 +651,7 @@ const Home: React.FC = () => {
                 <div
                   key={user.id}
                   onClick={() => handleChatSelect(user)}
-                  className={`p-4 border-b border-white /5 cursor - pointer hover:bg-white/5 transition-colors ${anotherUserId !== "0"
+                  className={`p-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${anotherUserId !== "0" && Number(anotherUserId) === user.id
                     ? "bg-white/10 border-l-4 border-l-white"
                     : ""
                     }`}
@@ -674,36 +677,50 @@ const Home: React.FC = () => {
         </div>
 
         {/* Right Main Chat Area */}
-        <div className="flex-1 flex flex-col bg-linear-to-br from-black to-gray-900">
+        <div className={`flex-1 flex flex-col h-full bg-linear-to-br from-black to-gray-900 ${
+          !anotherUserId ? "hidden md:flex" : "flex"
+        }`}>
           {/* Chat Header */}
-          <div className="p-4 border-b border-white/10 bg-black/40 backdrop-blur-sm">
-
+          <div className="p-3 md:p-4 border-b border-white/10 bg-black/40 backdrop-blur-sm">
             {anotherUserId === "0" ? (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 md:gap-3">
+                <button
+                  onClick={() => navigate("/home")}
+                  className="md:hidden text-gray-400 hover:text-white p-2 -ml-1 rounded-full hover:bg-white/10 transition-colors"
+                  aria-label="Back to conversations"
+                >
+                  <ArrowLeft size={20} />
+                </button>
                 <Avatar type="global" name="global" size="md" emoji="G" />
                 <div>
                   <h3 className="font-semibold text-white">
                     Global
                   </h3>
-                  <p className="text-sm text-gray-400">{`${users.filter((u) => u.isOnline).length} users online`}</p>
+                  <p className="text-xs md:text-sm text-gray-400">{`${users.filter((u) => u.isOnline).length} users online`}</p>
                 </div>
               </div>
             ) : (
               <div className="flex items-center justify-between">
-
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <button
+                    onClick={() => navigate("/home")}
+                    className="md:hidden text-gray-400 hover:text-white p-2 -ml-1 rounded-full hover:bg-white/10 transition-colors"
+                    aria-label="Back to conversations"
+                  >
+                    <ArrowLeft size={20} />
+                  </button>
                   <Avatar type="user" name={activeChat?.name} size="md" emoji={activeChat?.avatar} />
                   <div>
                     <h3 className="font-semibold text-white">
                       {activeChat?.name}
                     </h3>
-                    <p className="text-sm text-gray-400">{activeChat?.isOnline ? "Online" : "Offline"}</p>
+                    <p className="text-xs md:text-sm text-gray-400">{activeChat?.isOnline ? "Online" : "Offline"}</p>
                   </div>
                 </div>
                 <div>
                   {anotherUserId != "0" && activeChat?.isOnline &&
-                    <button className="cursor-pointer bg-linear-to-r from-white to-gray-300 text-black p-3 rounded-xl hover:from-gray-100 hover:to-gray-200 transition-all duration-200 hover:scale-105 active:scale-95" onClick={() => handleVideoCall(Number(anotherUserId))}>
-                      <FaVideo size={20} />
+                    <button className="cursor-pointer bg-linear-to-r from-white to-gray-300 text-black p-2.5 md:p-3 rounded-xl hover:from-gray-100 hover:to-gray-200 transition-all duration-200 hover:scale-105 active:scale-95" onClick={() => handleVideoCall(Number(anotherUserId))}>
+                      <FaVideo size={18} />
                     </button>}
                 </div>
               </div>

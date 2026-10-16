@@ -374,7 +374,7 @@ const MessageList: React.FC<MessageListProps> = ({
     <div className="relative flex-1 overflow-hidden">
       <div
         ref={messagesContainerRef}
-        className="h-full overflow-y-auto p-6 bg-linear-to-b from-black via-gray-900 to-black"
+        className="h-full overflow-y-auto p-3 sm:p-4 md:p-6 bg-linear-to-b from-black via-gray-900 to-black"
       >
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center text-gray-400">
@@ -441,7 +441,7 @@ const MessageList: React.FC<MessageListProps> = ({
                     }`}
                   >
                     <div
-                      className={`max-w-xs relative lg:max-w-md min-w-24 pr-5 pl-3 py-1 pb-4 rounded-2xl shadow-lg transition-all duration-200 hover:shadow-xl ${
+                      className={`max-w-[85%] sm:max-w-xs md:max-w-md relative min-w-24 pr-5 pl-3 py-1 pb-4 rounded-2xl shadow-lg transition-all duration-200 hover:shadow-xl ${
                         isOwnMessage
                           ? "bg-linear-to-r from-white to-gray-200 text-black rounded-br-md"
                           : "bg-linear-to-br from-gray-800 to-gray-900 text-white rounded-bl-md border border-white/10"

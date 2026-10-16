@@ -69,14 +69,14 @@ router.post("/login", async (req, res) => {
     const cookieOptions = {
       expires: new Date(
         Date.now() +
-          (process.env.JWT_COOKIE_EXPIRES_IN || 7) * 24 * 60 * 60 * 1000 // Default to 7 days
+        (process.env.JWT_COOKIE_EXPIRES_IN || 7) * 24 * 60 * 60 * 1000 // Default to 7 days
       ),
       httpOnly: true,
       // secure: true, Only send the cookie over HTTPS, not HTTP
       // sameSite: 'None': Allow the cookie to be sent with cross-origin requests,
       // essential for different domains or ports
       // (like frontend and backend running on different ports during development).
-      sameSite: "none",
+      sameSite: "lax",
       secure: false,
     };
 
