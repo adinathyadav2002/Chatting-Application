@@ -574,24 +574,24 @@ const Home: React.FC = () => {
   }, [socket]);
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-900 via-black to-gray-900">
+    <div className="fixed inset-0 h-[100dvh] w-full bg-zinc-950 text-zinc-100 overflow-hidden flex flex-col select-none">
       {videoModal != "off" && <VideoCallingModal st={videoModal} onChangeModal={handleChangeModal} handleVideoCallReponse={handleVideoCallReponse} myStream={myStream} handleEndCall={handleEndCall} />}
 
-      <div className="flex h-screen w-full bg-linear-to-br from-gray-900 via-black to-gray-900 overflow-hidden">
+      <div className="flex h-full w-full bg-zinc-950 overflow-hidden">
         {/* Left Sidebar - Conversations */}
-        <div className={`w-full md:w-80 md:min-w-80 bg-linear-to-b from-gray-900 to-black border-r border-white/10 flex flex-col h-full ${
+        <div className={`w-full md:w-80 md:min-w-80 bg-zinc-900 border-r border-white/10 flex flex-col h-full ${
           anotherUserId ? "hidden md:flex" : "flex"
         }`}>
           {/* Sidebar Header */}
-          <div className="px-4 h-19 bg-black/40 backdrop-blur-sm border-b border-white/10 flex flex-row items-center justify-between text-gray-400">
-            <div className="flex gap-2 items-center">
-              <img src="/logo_bg.png" className="rounded-3xl w-8 h-8" alt="Logo"></img>
-              <h2 className="text-lg font-semibold text-white tracking-wide">STRANGERS LIVE</h2>
+          <div className="px-4 h-16 shrink-0 bg-zinc-900 border-b border-white/10 flex flex-row items-center justify-between text-zinc-400">
+            <div className="flex gap-2.5 items-center">
+              <img src="/logo_bg.png" className="rounded-xl w-8 h-8 object-cover" alt="Logo"></img>
+              <h2 className="text-sm font-semibold text-white tracking-wide">STRANGERS LIVE</h2>
             </div>
-            <div className="flex h-4 items-center gap-2 text-sm">
+            <div className="flex items-center gap-2">
               <button
                 onClick={handleLogout}
-                className="cursor-pointer px-3 py-1.5 md:py-2 rounded-2xl bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-xs md:text-sm transition-all duration-200"
+                className="cursor-pointer px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-red-600/80 text-zinc-300 hover:text-white text-xs font-medium transition-colors"
               >
                 Logout
               </button>
@@ -603,16 +603,16 @@ const Home: React.FC = () => {
             {/* Global Chat Row */}
             <div
               onClick={() => navigate("/home/0")}
-              className={`p-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${anotherUserId === "0"
-                ? "bg-white/10 border-l-4 border-l-white"
+              className={`px-4 py-3 border-b border-white/5 cursor-pointer hover:bg-zinc-800/50 transition-colors ${anotherUserId === "0"
+                ? "bg-zinc-800/90 border-l-2 border-l-blue-500"
                 : ""
                 }`}
             >
               <div className="flex items-center gap-3">
-                <Avatar type="global" name="global" size="lg" emoji="G" />
-                <div className="flex-1">
-                  <h3 className="font-medium text-white">Global Chat</h3>
-                  <p className="text-sm text-gray-400">
+                <Avatar type="global" name="global" size="md" emoji="🌍" />
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base md:text-sm font-medium text-white truncate">Global Chat</h3>
+                  <p className="text-sm md:text-xs text-zinc-400 truncate mt-0.5">
                     {users.filter((u) => u.isOnline).length} users online
                   </p>
                 </div>
@@ -624,9 +624,9 @@ const Home: React.FC = () => {
               <div
                 key={conversation.user.id}
                 onClick={() => handleChatSelect(conversation.user)}
-                className={`p-3 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${anotherUserId !== "global" &&
+                className={`px-4 py-3 border-b border-white/5 cursor-pointer hover:bg-zinc-800/50 transition-colors ${anotherUserId !== "global" &&
                   Number(anotherUserId) === conversation.user.id
-                  ? "bg-white/10 border-l-4 border-l-white"
+                  ? "bg-zinc-800/90 border-l-2 border-l-blue-500"
                   : ""
                   }`}
               >
@@ -634,23 +634,23 @@ const Home: React.FC = () => {
                   <Avatar
                     type="user"
                     name={conversation.user.name}
-                    size="lg"
+                    size="md"
                     isOnline={conversation.user.isOnline}
                     emoji={conversation.user.avatar}
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-medium text-white truncate">
+                      <h3 className="text-base md:text-sm font-medium text-white truncate">
                         {conversation.user.name}
                       </h3>
                       {conversation.unreadCount > 0 && (
-                        <span className="bg-white text-black text-xs rounded-full px-2 py-1 min-w-5 text-center font-semibold">
+                        <span className="bg-blue-600 text-white text-xs rounded-full px-2 py-0.5 min-w-4 text-center font-medium">
                           {conversation.unreadCount}
                         </span>
                       )}
                     </div>
                     {conversation.lastMessage && (
-                      <p className="text-sm text-gray-400 truncate">
+                      <p className="text-sm md:text-xs text-zinc-400 truncate mt-0.5">
                         {conversation.lastMessage}
                       </p>
                     )}
@@ -670,8 +670,8 @@ const Home: React.FC = () => {
                 <div
                   key={user.id}
                   onClick={() => handleChatSelect(user)}
-                  className={`p-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${anotherUserId !== "0" && Number(anotherUserId) === user.id
-                    ? "bg-white/10 border-l-4 border-l-white"
+                  className={`px-4 py-3 border-b border-white/5 cursor-pointer hover:bg-zinc-800/50 transition-colors ${anotherUserId !== "0" && Number(anotherUserId) === user.id
+                    ? "bg-zinc-800/90 border-l-2 border-l-blue-500"
                     : ""
                     }`}
                 >
@@ -679,13 +679,13 @@ const Home: React.FC = () => {
                     <Avatar
                       type="user"
                       name={user.name}
-                      size="lg"
+                      size="md"
                       isOnline={user.isOnline}
                       emoji={user.avatar}
                     />
-                    <div className="flex-1">
-                      <h3 className="font-medium text-white">{user.name}</h3>
-                      <p className="text-sm text-gray-400">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base md:text-sm font-medium text-white truncate">{user.name}</h3>
+                      <p className="text-sm md:text-xs text-zinc-400 mt-0.5">
                         {user.isOnline ? "Online" : "Offline"}
                       </p>
                     </div>
@@ -696,70 +696,93 @@ const Home: React.FC = () => {
         </div>
 
         {/* Right Main Chat Area */}
-        <div className={`flex-1 flex flex-col h-full bg-linear-to-br from-black to-gray-900 ${
+        <div className={`flex-1 flex flex-col h-full bg-zinc-950 overflow-hidden relative ${
           !anotherUserId ? "hidden md:flex" : "flex"
         }`}>
-          {/* Chat Header */}
-          <div className="p-3 md:p-4 border-b border-white/10 bg-black/40 backdrop-blur-sm">
+          {/* Fixed Chat Header */}
+          <div className="h-16 shrink-0 z-20 px-4 md:px-5 border-b border-white/10 bg-zinc-900 flex items-center">
             {anotherUserId === "0" ? (
-              <div className="flex items-center gap-2 md:gap-3">
+              <div className="flex items-center gap-2.5 md:gap-3 w-full">
                 <button
                   onClick={() => navigate("/home")}
-                  className="md:hidden text-gray-400 hover:text-white p-2 -ml-1 rounded-full hover:bg-white/10 transition-colors"
+                  className="md:hidden text-zinc-400 hover:text-white p-1.5 -ml-1 rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors"
                   aria-label="Back to conversations"
                 >
-                  <ArrowLeft size={20} />
+                  <ArrowLeft size={18} />
                 </button>
-                <Avatar type="global" name="global" size="md" emoji="G" />
+                <div className="relative">
+                  <Avatar type="global" name="global" size="md" emoji="🌍" />
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-zinc-900 rounded-full"></span>
+                </div>
                 <div>
-                  <h3 className="font-semibold text-white">
-                    Global
+                  <h3 className="font-semibold text-white text-base md:text-base">
+                    Global Chat
                   </h3>
-                  <p className="text-xs md:text-sm text-gray-400">{`${users.filter((u) => u.isOnline).length} users online`}</p>
+                  <p className="text-xs text-emerald-400 font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    {`${users.filter((u) => u.isOnline).length} online`}
+                  </p>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 md:gap-3">
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2.5 md:gap-3">
                   <button
                     onClick={() => navigate("/home")}
-                    className="md:hidden text-gray-400 hover:text-white p-2 -ml-1 rounded-full hover:bg-white/10 transition-colors"
+                    className="md:hidden text-zinc-400 hover:text-white p-1.5 -ml-1 rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors"
                     aria-label="Back to conversations"
                   >
-                    <ArrowLeft size={20} />
+                    <ArrowLeft size={18} />
                   </button>
-                  <Avatar type="user" name={activeChat?.name} size="md" emoji={activeChat?.avatar} />
+                  <div className="relative">
+                    <Avatar type="user" name={activeChat?.name} size="md" emoji={activeChat?.avatar} />
+                    {activeChat?.isOnline && (
+                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-zinc-900 rounded-full"></span>
+                    )}
+                  </div>
                   <div>
-                    <h3 className="font-semibold text-white">
+                    <h3 className="font-semibold text-white text-base md:text-base">
                       {activeChat?.name}
                     </h3>
-                    <p className="text-xs md:text-sm text-gray-400">{activeChat?.isOnline ? "Online" : "Offline"}</p>
+                    <p className={`text-xs font-medium flex items-center gap-1 ${activeChat?.isOnline ? "text-emerald-400" : "text-zinc-500"}`}>
+                      {activeChat?.isOnline && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>}
+                      {activeChat?.isOnline ? "Online" : "Offline"}
+                    </p>
                   </div>
                 </div>
                 <div>
-                  {anotherUserId != "0" && activeChat?.isOnline &&
-                    <button className="cursor-pointer bg-linear-to-r from-white to-gray-300 text-black p-2.5 md:p-3 rounded-xl hover:from-gray-100 hover:to-gray-200 transition-all duration-200 hover:scale-105 active:scale-95" onClick={() => handleVideoCall(Number(anotherUserId))}>
-                      <FaVideo size={18} />
-                    </button>}
+                  {anotherUserId != "0" && activeChat?.isOnline && (
+                    <button
+                      className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white p-2 sm:p-2.5 rounded-xl transition-colors active:scale-95"
+                      onClick={() => handleVideoCall(Number(anotherUserId))}
+                      title="Start Video Call"
+                    >
+                      <FaVideo size={14} />
+                    </button>
+                  )}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Messages */}
-          <MessageList
-            messages={messages}
-            currentUserId={userdata.id || 0}
-            onLoadMore={anotherUserId === "0" ? loadMoreGlobalMessages : loadMorePrivateMessages}
-            hasMoreMessages={anotherUserId === "0" ? hasMoreGlobalMessages : hasMorePrivateMessages}
-            onMessagesRead={handleMessagesRead}
-          />
+          {/* Messages Area - Fills space and scrolls independently */}
+          <div className="flex-1 min-h-0 overflow-hidden relative">
+            <MessageList
+              messages={messages}
+              currentUserId={userdata.id || 0}
+              onLoadMore={anotherUserId === "0" ? loadMoreGlobalMessages : loadMorePrivateMessages}
+              hasMoreMessages={anotherUserId === "0" ? hasMoreGlobalMessages : hasMorePrivateMessages}
+              onMessagesRead={handleMessagesRead}
+            />
+          </div>
 
-          {/* Message Input */}
-          <MessageInput
-            onSendMessage={handleSendMessage}
-            disabled={!isConnected}
-          />
+          {/* Fixed Message Input at Bottom */}
+          <div className="shrink-0 z-20 bg-zinc-900/90 backdrop-blur-md">
+            <MessageInput
+              onSendMessage={handleSendMessage}
+              disabled={!isConnected}
+            />
+          </div>
         </div>
       </div>
     </div >

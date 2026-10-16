@@ -222,26 +222,44 @@ const Register: React.FC = () => {
                     htmlFor="avatar"
                     className="block text-sm font-semibold text-gray-300 mb-1"
                   >
-                    Avatar
+                    Avatar (Single Emoji)
                   </label>
-                  <input
-                    id="avatar"
-                    name="avatar"
-                    type="text"
-                    value={formData.avatar}
-                    onChange={handleInputChange}
-                    maxLength={10}
-                    className="w-full px-4 py-2 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent transition-all duration-200 bg-white/5 hover:bg-white/10 text-white placeholder-gray-500 backdrop-blur-sm"
-                    placeholder="Enter an emoji or Letter (e.g., 😊, 🚀, ⭐, L)"
-                  />
-                  {formData.avatar && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="text-lg">{formData.avatar}</span>
-                      <span className="text-xs text-gray-400">Preview</span>
+                  <div className="flex items-center gap-3">
+                    <input
+                      id="avatar"
+                      name="avatar"
+                      type="text"
+                      value={formData.avatar}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const chars = Array.from(val);
+                        // Take only the very first emoji/grapheme cluster
+                        const singleEmoji = chars.length > 0 ? chars[chars.length - 1] : "";
+                        setFormData((prev) => ({
+                          ...prev,
+                          avatar: singleEmoji,
+                        }));
+                      }}
+                      className="w-20 text-center text-2xl px-3 py-2 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent transition-all duration-200 bg-white/5 hover:bg-white/10 text-white backdrop-blur-sm"
+                      placeholder="✨"
+                    />
+                    <div className="flex-1 flex flex-wrap gap-1.5 p-2 bg-white/5 border border-white/10 rounded-2xl">
+                      {["😎", "🚀", "🔥", "🐱", "⚡", "🌟", "👑", "🎮"].map((em) => (
+                        <button
+                          key={em}
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, avatar: em }))}
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center text-lg hover:bg-white/20 transition-all ${
+                            formData.avatar === em ? "bg-white/30 scale-110 shadow-sm" : ""
+                          }`}
+                        >
+                          {em}
+                        </button>
+                      ))}
                     </div>
-                  )}
-                  <p className="text-xs text-gray-500 mt-1">
-                    You can use any emoji, symbol, or letter as your avatar
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Select or type exactly one emoji for your profile
                   </p>
                 </div>
 

@@ -371,21 +371,22 @@ const MessageList: React.FC<MessageListProps> = ({
   };
 
   return (
-    <div className="relative flex-1 overflow-hidden">
+    <div className="relative w-full h-full flex flex-col flex-1 min-h-0 overflow-hidden">
       <div
         ref={messagesContainerRef}
-        className="h-full overflow-y-auto p-3 sm:p-4 md:p-6 bg-linear-to-b from-black via-gray-900 to-black"
+        className="w-full h-full flex-1 overflow-y-auto overscroll-y-contain p-3 sm:p-4 md:p-6 bg-zinc-950 flex flex-col"
+        style={{ overscrollBehaviorY: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
       >
         {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center text-gray-400">
-            <Divide size={40} className="mb-4 opacity-40" />
-            <p className="text-base tracking-wide">No messages yet</p>
-            <p className="text-base text-gray-500 mt-1">
-              Start the conversation ✨
+          <div className="flex-1 w-full flex flex-col items-center justify-center my-auto py-12 text-center text-zinc-400 select-none">
+            <Divide size={38} className="mb-2.5 opacity-35 text-zinc-400" />
+            <p className="text-base font-medium text-zinc-200">No messages yet</p>
+            <p className="text-sm text-zinc-400 mt-1">
+              Start the conversation
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 mt-auto">
             {isLoadingMore && (
               <div className="flex justify-center py-4">
                 <Loader2 size={24} className="animate-spin text-gray-400" />
@@ -441,24 +442,24 @@ const MessageList: React.FC<MessageListProps> = ({
                     }`}
                   >
                     <div
-                      className={`max-w-[85%] sm:max-w-xs md:max-w-md relative min-w-24 pr-5 pl-3 py-1 pb-4 rounded-2xl shadow-lg transition-all duration-200 hover:shadow-xl ${
+                      className={`max-w-[85%] sm:max-w-xs md:max-w-md relative min-w-24 pr-7 pl-3.5 py-2 pb-4 rounded-2xl shadow-xs transition-all duration-150 select-text ${
                         isOwnMessage
-                          ? "bg-linear-to-r from-white to-gray-200 text-black rounded-br-md"
-                          : "bg-linear-to-br from-gray-800 to-gray-900 text-white rounded-bl-md border border-white/10"
+                          ? "bg-blue-600 text-white rounded-br-xs"
+                          : "bg-zinc-800 text-zinc-100 rounded-bl-xs border border-white/5"
                       }`}
                     >
-                      {anotherUserId === "0" && (
-                        <div className="text-sm leading-relaxed font-semibold mb-1">
+                      {anotherUserId === "0" && !isOwnMessage && (
+                        <div className="text-xs md:text-xs text-blue-400 font-medium mb-1">
                           {message?.sender.name}
                         </div>
                       )}
-                      <div className="text-sm leading-relaxed">
+                      <div className="text-base md:text-[15px] leading-relaxed">
                         {message?.content}
                       </div>
 
                       <div
-                        className={`text-xs absolute right-1 bottom-0.5 flex items-center gap-1 ${
-                          isOwnMessage ? "text-gray-600" : "text-gray-400"
+                        className={`text-xs md:text-xs absolute right-2 bottom-1 flex items-center gap-1 ${
+                          isOwnMessage ? "text-blue-200" : "text-zinc-400"
                         }`}
                       >
                         {formatTime(message?.createdAt)}
@@ -466,16 +467,16 @@ const MessageList: React.FC<MessageListProps> = ({
                         {isOwnMessage && message.isRead === "not-send" && (
                           <Clock
                             size={12}
-                            className="text-gray-400 animate-pulse"
+                            className="text-blue-200 animate-pulse"
                           />
                         )}
 
                         {isOwnMessage && message.isRead === "send" && (
-                          <Check size={12} className="text-gray-400" />
+                          <Check size={12} className="text-blue-200" />
                         )}
 
                         {isOwnMessage && message.isRead === "read" && (
-                          <CheckCheck size={12} className="text-blue-500" />
+                          <CheckCheck size={12} className="text-sky-200" />
                         )}
                       </div>
                     </div>
