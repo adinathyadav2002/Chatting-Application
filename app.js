@@ -90,22 +90,26 @@ io.on("connection", (socket) => {
         where: { roomId },
       });
 
-      const sender = await prisma.user.findFirst({
-        where: { id: message.senderId },
-      });
-
       if (!message) {
         console.log("Invalid roomId:", roomId);
         return;
       }
 
-      await prisma.messages.update({
-        where: { roomId },
-        data: { isRead: true },
+      const sender = await prisma.user.findFirst({
+        where: { id: message.senderId },
       });
 
-      console.log(`answer ${ans}`);
+      if (!sender || !sender.socketId) {
+        console.log("Sender socket not found for call:", message.senderId);
+        return;
+      }
 
+      await prisma.messages.update({
+        where: { roomId },
+        data: { isRead: "read" },
+      });
+
+      console.log(`Forwarding answer to caller ${sender.socketId}`);
       io.to(sender.socketId).emit("receiver accepted call", ans);
     } catch (err) {
       console.error("Error while receiving call:", err);
@@ -172,7 +176,7 @@ io.on("connection", (socket) => {
 
       const updatedMessage = await prisma.messages.update({
         where: { roomId },
-        data: { isRead: false },
+        data: { isRead: "not-send" },
       });
 
       // Emit to receiver if they're online

@@ -8,7 +8,7 @@ export default function VideoCallingModal({ st, onChangeModal, handleVideoCallRe
     st: "live" | "receiving" | "calling", onChangeModal: (modal: "receiving" | "off" | "calling" | "live") => void, handleVideoCallReponse: (response: "accept" | "reject") => void, myStream: MediaStream | null, handleEndCall: () => void
 
 }) {
-    const [isMuted, setIsMuted] = useState(true);
+    const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
     const [callDuration, setCallDuration] = useState(0);
 
@@ -29,23 +29,24 @@ export default function VideoCallingModal({ st, onChangeModal, handleVideoCallRe
         // Add event listener for beforeunload
         window.addEventListener('beforeunload', handleEndCall);
 
-        // Cleanup the event listener on component unmount
         return () => {
             window.removeEventListener('beforeunload', handleEndCall);
         };
-    }, [socket]);
+    }, [handleEndCall]);
 
-    // Socket listener
+    // Socket listener for answer
     useEffect(() => {
         if (!socket) return;
 
-        socket.on("receiver accepted call", async (ans: RTCSessionDescriptionInit) => {
-            await setRemoteAns(ans)
+        const handleAccepted = async (ans: RTCSessionDescriptionInit) => {
+            await setRemoteAns(ans);
             onChangeModal("live");
-        });
+        };
+
+        socket.on("receiver accepted call", handleAccepted);
 
         return () => {
-            socket.off("receiver accepted call");
+            socket.off("receiver accepted call", handleAccepted);
         };
     }, [socket, setRemoteAns, onChangeModal]);
 
@@ -56,7 +57,6 @@ export default function VideoCallingModal({ st, onChangeModal, handleVideoCallRe
                 setCallDuration(prev => prev + 1);
             }, 1000);
         } else {
-            // Reset timer when not live
             if (timerIntervalRef.current) {
                 clearInterval(timerIntervalRef.current);
                 timerIntervalRef.current = null;
@@ -64,7 +64,6 @@ export default function VideoCallingModal({ st, onChangeModal, handleVideoCallRe
             setCallDuration(0);
         }
 
-        // Cleanup timer when component unmounts or state changes
         return () => {
             if (timerIntervalRef.current) {
                 clearInterval(timerIntervalRef.current);
@@ -73,32 +72,39 @@ export default function VideoCallingModal({ st, onChangeModal, handleVideoCallRe
         };
     }, [st]);
 
-    // Set local video stream (only once when myStream changes)
+    // Set local video stream
     useEffect(() => {
-        if (!myStream || (st !== "live" && st != "calling")) return;
+        if (!myStream || (st !== "live" && st !== "calling")) return;
 
         if (localVideoRef.current) {
             localVideoRef.current.srcObject = myStream;
+            localVideoRef.current.play().catch(e => console.warn("Local video play warning:", e));
         }
     }, [myStream, st]);
 
+    // Set remote video stream
     useEffect(() => {
-        if (myStream) {
-            console.log("Local tracks:", myStream.getTracks());
-        }
-    }, [myStream]);
+        const videoEl = remoteVideoRef.current;
+        if (!videoEl || !remoteStream) return;
 
+        console.log("📺 Setting remoteVideoRef.srcObject with tracks:", remoteStream.getTracks());
+        videoEl.srcObject = remoteStream;
 
+        const playVideo = () => {
+            videoEl.play().catch(e => {
+                console.warn("Autoplay was prevented by browser, retrying muted:", e);
+                videoEl.muted = true;
+                videoEl.play().catch(err => console.error("Video play failed:", err));
+            });
+        };
 
+        videoEl.onloadedmetadata = () => {
+            console.log("📺 Remote video metadata loaded, playing video");
+            playVideo();
+        };
 
-    // Set remote video stream (only once when remoteStream changes)
-    useEffect(() => {
-        if (remoteVideoRef.current && remoteStream) {
-            remoteVideoRef.current.srcObject = remoteStream;
-        } else {
-            console.log(`mystream not found ${remoteVideoRef.current} mystream  ${remoteStream}`);
-        }
-    }, [remoteStream]);
+        playVideo();
+    }, [remoteStream, st]);
 
     // Toggle mute functionality
     useEffect(() => {
@@ -108,8 +114,6 @@ export default function VideoCallingModal({ st, onChangeModal, handleVideoCallRe
             });
         }
     }, [isMuted, myStream]);
-
-
 
     // Toggle video functionality
     useEffect(() => {
@@ -132,20 +136,19 @@ export default function VideoCallingModal({ st, onChangeModal, handleVideoCallRe
                     <div className='w-full h-full flex items-center justify-center relative'>
                         <div className='flex flex-col items-center gap-3 md:gap-4 w-full h-full'>
                             <div className='w-full h-full rounded-xl md:rounded-2xl bg-linear-to-br from-gray-900 to-black flex items-center justify-center overflow-hidden shadow-inner relative border border-white/5'>
-                                {remoteStream ? (
-                                    <video
-                                        ref={remoteVideoRef}
-                                        autoPlay
-                                        playsInline
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
+                                <video
+                                    ref={remoteVideoRef}
+                                    autoPlay
+                                    playsInline
+                                    className={`w-full h-full object-cover ${st === "live" ? "block" : "hidden"}`}
+                                />
+                                {st !== "live" && (
                                     <div className='flex flex-col items-center gap-4 px-4 text-center'>
                                         <div className='w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-full bg-linear-to-br from-gray-800 to-gray-900 flex items-center justify-center shadow-xl border-2 border-white/10'>
                                             <User className='w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 text-gray-400' />
                                         </div>
                                         <div className='text-white text-base sm:text-lg md:text-xl font-semibold tracking-wide'>
-                                            {st === "live" && "Connected"}
+                                            {st === "live" && "Connecting video..."}
                                             {st === "receiving" && "Incoming Video Call..."}
                                             {st === "calling" && "Calling..."}
                                         </div>

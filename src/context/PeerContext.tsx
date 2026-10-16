@@ -31,12 +31,19 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
         const pc = new RTCPeerConnection({
             iceServers: [
                 { urls: "stun:stun.l.google.com:19302" },
-                { urls: "stun:stun1.l.google.com:19302" }
+                { urls: "stun:stun1.l.google.com:19302" },
+                { urls: "stun:stun2.l.google.com:19302" },
+                { urls: "stun:stun3.l.google.com:19302" },
+                { urls: "stun:stun4.l.google.com:19302" }
             ]
         });
 
         pc.onconnectionstatechange = () => {
-            console.log("Connection state:", pc.connectionState);
+            console.log("⚡ PC Connection state:", pc.connectionState);
+        };
+
+        pc.oniceconnectionstatechange = () => {
+            console.log("⚡ PC ICE Connection state:", pc.iceConnectionState);
         };
 
         pc.onicecandidate = (event) => {
@@ -50,8 +57,15 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
         };
 
         pc.ontrack = (ev) => {
-            if (ev.streams[0]) {
+            console.log("🎥 ontrack event fired:", ev.track.kind, ev.streams);
+            if (ev.streams && ev.streams[0]) {
                 setRemoteStream(ev.streams[0]);
+            } else {
+                setRemoteStream((prevStream) => {
+                    const newStream = prevStream ? new MediaStream(prevStream.getTracks()) : new MediaStream();
+                    newStream.addTrack(ev.track);
+                    return newStream;
+                });
             }
         };
 
@@ -85,10 +99,18 @@ export const PeerProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Send media stream to peer
     const sendStream = async (stream: MediaStream) => {
+        if (!peerRef.current) return;
+        const senders = peerRef.current.getSenders();
         const tracks = stream.getTracks();
         for (const track of tracks) {
-            console.log(`➕ Adding ${track.kind} track to peer connection`);
-            if (peerRef.current) peerRef.current.addTrack(track, stream);
+            const sender = senders.find(s => s.track?.kind === track.kind);
+            if (sender) {
+                console.log(`🔄 Replacing ${track.kind} track on existing sender`);
+                await sender.replaceTrack(track);
+            } else {
+                console.log(`➕ Adding ${track.kind} track to peer connection`);
+                peerRef.current.addTrack(track, stream);
+            }
         }
     };
 

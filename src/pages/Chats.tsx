@@ -34,7 +34,7 @@ const Home: React.FC = () => {
   const [hasMoreGlobalMessages, setHasMoreGlobalMessages] = useState(false);
   const [hasMorePrivateMessages, setHasMorePrivateMessages] = useState(false);
 
-  const { createOffer, createAnswer, sendStream, remoteStream, assignNewPeer } = usePeerContext();
+  const { createOffer, createAnswer, sendStream, remoteStream, assignNewPeer, addIceCandidate, setRemoteAns } = usePeerContext();
   const { userdata, isLoggedIn, handleUpdateUser, setIsLoggedIn, roomId, setRoomId, roomIdRef } =
     useUserContext();
   const { socket, isConnected } = useSocket();
@@ -43,7 +43,7 @@ const Home: React.FC = () => {
   const [myStream, setMyStream] = useState<MediaStream | null>(null);
 
   const getUserMediaStream = async () => {
-    if (myStreamRef.current) return myStreamRef.current;
+    if (myStreamRef.current && myStreamRef.current.active) return myStreamRef.current;
 
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: true,
@@ -70,44 +70,51 @@ const Home: React.FC = () => {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("want to video call", async (roomId, offer) => {
-      if (roomIdRef) roomIdRef.current = roomId
-      if (offerRef) offerRef.current = offer
+    const handleIncomingCall = async (incomingRoomId: string, offer: RTCSessionDescriptionInit) => {
+      setRoomId(incomingRoomId);
+      if (roomIdRef) roomIdRef.current = incomingRoomId;
+      if (offerRef) offerRef.current = offer;
 
-      await getUserMediaStream();
-      if (myStreamRef.current) {
-        await sendStream(myStreamRef.current);
+      try {
+        const stream = await getUserMediaStream();
+        await sendStream(stream);
+      } catch (err) {
+        console.error("Camera/Mic permission failed:", err);
       }
 
       setVideoModal("receiving");
-    });
-
-    socket.on("ice-candidate", async ({ candidate, userId }) => {
-      if (userId !== Number(anotherUserId)) return;
-      const { addIceCandidate } = usePeerContext();
-      await addIceCandidate(candidate);
-    });
-
-    return () => {
-      socket.off("want to video call");
-      socket.off("ice-candidate");
     };
 
-  }, [socket, anotherUserId])
+    const handleIceCandidate = async ({ candidate, userId }: { candidate: RTCIceCandidateInit, userId?: number }) => {
+      if (candidate) {
+        await addIceCandidate(candidate);
+      }
+    };
+
+    socket.on("want to video call", handleIncomingCall);
+    socket.on("ice-candidate", handleIceCandidate);
+
+    return () => {
+      socket.off("want to video call", handleIncomingCall);
+      socket.off("ice-candidate", handleIceCandidate);
+    };
+
+  }, [socket, anotherUserId, addIceCandidate, sendStream]);
 
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("receiver accepted call", async (ans: RTCSessionDescriptionInit) => {
-      const { setRemoteAns } = usePeerContext();
-      await setRemoteAns(ans)
+    const handleReceiverAccepted = async (ans: RTCSessionDescriptionInit) => {
+      await setRemoteAns(ans);
       handleChangeModal("live");
-    });
+    };
+
+    socket.on("receiver accepted call", handleReceiverAccepted);
 
     return () => {
-      socket.off("receiver accepted call");
+      socket.off("receiver accepted call", handleReceiverAccepted);
     };
-  }, [socket, handleChangeModal]);
+  }, [socket, setRemoteAns, handleChangeModal]);
 
   useEffect(() => {
     const fetchGlobalMessages = async (page: number = 1) => {
@@ -306,23 +313,24 @@ const Home: React.FC = () => {
       return;
     }
 
+    const currentRoomId = roomIdRef?.current || roomId;
+
     if (!offerRef.current) {
-      socket.emit("reject video call", userdata.id, roomId);
+      socket.emit("reject video call", userdata.id, currentRoomId);
       return;
     }
 
     if (response == "accept") {
-
       const stream = await getUserMediaStream();
       await sendStream(stream);
 
       const ans = await createAnswer(offerRef.current);
-      socket.emit("received video call", userdata.id, roomId, ans);
+      socket.emit("received video call", userdata.id, currentRoomId, ans);
       setVideoModal("live");
     }
 
     if (response == "reject") {
-      socket.emit("rejected video call", userdata.id, roomId);
+      socket.emit("rejected video call", userdata.id, currentRoomId);
     }
   }
 
@@ -402,26 +410,37 @@ const Home: React.FC = () => {
   }
 
   const handleEndCall = () => {
-
-    if (myStream) {
-      myStream.getTracks().forEach(track => track.stop());
+    // Stop local camera and microphone tracks completely
+    if (myStreamRef.current) {
+      myStreamRef.current.getTracks().forEach((track) => {
+        track.stop();
+        console.log(`🛑 Stopped track: ${track.kind}`);
+      });
+      myStreamRef.current = null;
     }
 
+    if (myStream) {
+      myStream.getTracks().forEach((track) => track.stop());
+      setMyStream(null);
+    }
+
+    // Stop remote stream tracks
     if (remoteStream) {
-      remoteStream.getTracks().forEach(track => track.stop());
+      remoteStream.getTracks().forEach((track) => track.stop());
     }
 
     assignNewPeer();
 
-    //  end call for other peer
-    if (socket) socket.emit("ended call", roomIdRef?.current)
+    // End call for other peer via socket
+    if (socket && roomIdRef?.current) {
+      socket.emit("ended call", roomIdRef.current);
+    }
 
-    if (roomIdRef)
-      roomIdRef.current = null;
+    if (roomIdRef) roomIdRef.current = null;
     offerRef.current = null;
 
     setVideoModal("off");
-  }
+  };
 
   const loadMoreGlobalMessages = async (page: number) => {
     const fetchGlobalMessages = async (page: number) => {
