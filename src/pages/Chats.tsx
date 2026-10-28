@@ -85,7 +85,7 @@ const Home: React.FC = () => {
       setVideoModal("receiving");
     };
 
-    const handleIceCandidate = async ({ candidate, userId }: { candidate: RTCIceCandidateInit, userId?: number }) => {
+    const handleIceCandidate = async ({ candidate }: { candidate: RTCIceCandidateInit; userId?: number }) => {
       if (candidate) {
         await addIceCandidate(candidate);
       }
