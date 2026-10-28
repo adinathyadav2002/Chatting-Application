@@ -13,6 +13,14 @@ export interface Message {
   isRead?: string;
 }
 
+export interface PrivateMessage {
+  id?: string | number;
+  senderId: string | number;
+  receiverId?: string | number;
+  content: string;
+  timestamp: Date;
+}
+
 export interface Room {
   id: string;
   name: string;
